@@ -16,5 +16,7 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
-  }
+  },
+  // Copy service worker to dist
+  publicDir: 'public'
 })

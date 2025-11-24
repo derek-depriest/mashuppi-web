@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
+import { CassetteLogo } from './CassetteLogo';
 import { api, STREAM_URL, type Track, type NowPlaying } from '@/services/api';
 
 export function CassettePlayer() {
@@ -7,6 +9,40 @@ export function CassettePlayer() {
   const [isPlaying, setIsPlaying] = useState(false); // Start paused
   const [volume, setVolume] = useState(70);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
+
+	useEffect(() => {
+	  // Capture the install prompt event
+	  const handleBeforeInstallPrompt = (e: any) => {
+		e.preventDefault();
+		setInstallPrompt(e);
+		setShowInstallButton(true);
+	  };
+
+	  window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+	  // Check if already installed
+	  if (window.matchMedia('(display-mode: standalone)').matches) {
+		setShowInstallButton(false);
+	  }
+
+	  return () => {
+		window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+	  };
+	}, []);
+
+	const handleInstallClick = async () => {
+	  if (!installPrompt) return;
+	  
+	  installPrompt.prompt();
+	  const { outcome } = await installPrompt.userChoice;
+	  
+	  if (outcome === 'accepted') {
+		setShowInstallButton(false);
+	  }
+	  setInstallPrompt(null);
+	};
 
   useEffect(() => {
     // Fetch initial now-playing
@@ -51,7 +87,7 @@ export function CassettePlayer() {
       <div className="w-full max-w-2xl space-y-4">
         {/* Logo - Compact */}
         <div className="text-center space-y-2">
-          <div className="text-5xl">📻</div>
+          <CassetteLogo className="w-20 h-16 mx-auto" />
           <h1 className="text-5xl font-black text-white tracking-wider drop-shadow-2xl">
             MASHUPPI
           </h1>
@@ -196,6 +232,36 @@ export function CassettePlayer() {
             </span>
           </div>
         </div>
+		
+		{/* Navigation Links */}
+<div className="flex justify-center gap-4">
+  <Link
+    to="/stats"
+    className="text-purple-200 hover:text-white transition-colors text-sm font-semibold"
+  >
+    📊 Stats
+  </Link>
+  <span className="text-purple-400">•</span>
+  <Link
+    to="/about"
+    className="text-purple-200 hover:text-white transition-colors text-sm font-semibold"
+  >
+    ℹ️ About
+  </Link>
+</div>
+		
+		{/* Install button - add after the Status section */}
+{showInstallButton && (
+  <div className="text-center">
+    <button
+      onClick={handleInstallClick}
+      className="inline-flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-all hover:scale-105"
+    >
+      <span>📱</span>
+      <span>Install App</span>
+    </button>
+  </div>
+)}
 
         {/* Hidden Audio Element */}
         <audio ref={audioRef} src={STREAM_URL} />

@@ -28,6 +28,11 @@ export const api = {
   getHealth: async () => {
     const response = await axios.get(`${API_BASE}/health`);
     return response.data;
+  },
+
+  getHistory: async () => {
+    const response = await axios.get(`${API_BASE}/history`);
+    return response.data;
   }
 };
 
