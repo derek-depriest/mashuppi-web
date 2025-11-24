@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
 import { api } from '@/services/api';
 
 interface Stats {

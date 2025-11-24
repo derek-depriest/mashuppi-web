@@ -50,10 +50,22 @@ export function CassettePlayer() {
 
   useEffect(() => {
     // Fetch initial now-playing
-    api.getNowPlaying().then((data: NowPlaying) => {
-      setNowPlaying(data.track);
-      // Don't auto-play - browsers block it anyway
-    });
+    const fetchNowPlaying = () => {
+      //console.log('[Heartbeat] Fetching now playing...');
+      api.getNowPlaying().then((data: NowPlaying) => {
+        //console.log('[Heartbeat] Received:', data.track?.title || 'No track');
+        setNowPlaying(data.track);
+      }).catch((error) => {
+        console.error('[Heartbeat] Failed to fetch now playing:', error);
+      });
+    };
+
+    // Initial fetch
+    fetchNowPlaying();
+
+    // Set up 10-second polling heartbeat
+    //console.log('[Heartbeat] Starting 10-second polling interval');
+    const heartbeatInterval = setInterval(fetchNowPlaying, 5000);
 
     // Set up WebSocket for real-time updates
     const ws = new WebSocket('wss://mashuppi.com/ws');
@@ -65,7 +77,18 @@ export function CassettePlayer() {
       }
     };
 
-    return () => ws.close();
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      ws.close();
+    };
   }, []);
 
   useEffect(() => {

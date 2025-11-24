@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE = 'https://mashuppi.com/api';
+// Use relative URL in development to go through Vite proxy
+const API_BASE = import.meta.env.DEV ? '/api' : 'https://mashuppi.com/api';
 
 export interface Track {
   artist: string;

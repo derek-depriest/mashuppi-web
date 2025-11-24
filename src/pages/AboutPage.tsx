@@ -1,6 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
-import { CassetteLogo } from '@/components/CassetteLogo';
 
 export function AboutPage({ onClose }: { onClose?: () => void }) {
   const isModal = !!onClose;
