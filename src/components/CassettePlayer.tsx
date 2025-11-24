@@ -1,48 +1,52 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
-import { Link } from 'react-router-dom';
 import { CassetteLogo } from './CassetteLogo';
 import { api, STREAM_URL, type Track, type NowPlaying } from '@/services/api';
+import { StatsPage } from '@/pages/StatsPage';
+import { AboutPage } from '@/pages/AboutPage';
+import { Marquee } from './Marquee';
+import { BarChart2, Info, Volume2 } from 'lucide-react';
 
 export function CassettePlayer() {
   const [nowPlaying, setNowPlaying] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false); // Start paused
-  const [volume, setVolume] = useState(70);
+  const [volume, setVolume] = useState(50);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
+  const [activeModal, setActiveModal] = useState<'stats' | 'about' | null>(null);
 
-	useEffect(() => {
-	  // Capture the install prompt event
-	  const handleBeforeInstallPrompt = (e: any) => {
-		e.preventDefault();
-		setInstallPrompt(e);
-		setShowInstallButton(true);
-	  };
+  useEffect(() => {
+    // Capture the install prompt event
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setShowInstallButton(true);
+    };
 
-	  window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-	  // Check if already installed
-	  if (window.matchMedia('(display-mode: standalone)').matches) {
-		setShowInstallButton(false);
-	  }
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallButton(false);
+    }
 
-	  return () => {
-		window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-	  };
-	}, []);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
-	const handleInstallClick = async () => {
-	  if (!installPrompt) return;
-	  
-	  installPrompt.prompt();
-	  const { outcome } = await installPrompt.userChoice;
-	  
-	  if (outcome === 'accepted') {
-		setShowInstallButton(false);
-	  }
-	  setInstallPrompt(null);
-	};
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+
+    if (outcome === 'accepted') {
+      setShowInstallButton(false);
+    }
+    setInstallPrompt(null);
+  };
 
   useEffect(() => {
     // Fetch initial now-playing
@@ -83,7 +87,7 @@ export function CassettePlayer() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex items-center justify-center p-4 overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex items-center justify-center p-4 overflow-hidden relative">
       <div className="w-full max-w-2xl space-y-4">
         {/* Logo - Compact */}
         <div className="text-center space-y-2">
@@ -97,26 +101,31 @@ export function CassettePlayer() {
         </div>
 
         {/* Cassette Card - Compact */}
-        <Card className="relative p-6 bg-gradient-to-br from-purple-500 to-purple-700 border-4 border-purple-900 shadow-2xl rounded-2xl">
+        <Card
+          onClick={togglePlay}
+          className="relative p-6 bg-gradient-to-br from-purple-500 to-purple-700 border-4 border-purple-900 shadow-2xl rounded-2xl cursor-pointer hover:scale-[1.02] transition-transform duration-200 active:scale-[0.98]"
+        >
           {/* Corner screws */}
           <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-gray-800 shadow-inner border border-gray-900" />
           <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-gray-800 shadow-inner border border-gray-900" />
           <div className="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-gray-800 shadow-inner border border-gray-900" />
           <div className="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-gray-800 shadow-inner border border-gray-900" />
-          
+
           {/* Label Area - Now Playing */}
-          <div className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 rounded-xl p-4 mb-4 shadow-inner">
+          <div className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 rounded-xl p-4 mb-4 shadow-inner" onClick={(e) => e.stopPropagation()}>
             <div className="text-xs text-gray-600 uppercase tracking-[0.15em] mb-1 font-bold">
               Now Playing
             </div>
             {nowPlaying ? (
-              <div className="space-y-0.5">
-                <div className="text-xl font-black text-gray-800 leading-tight truncate">
-                  {nowPlaying.title}
-                </div>
-                <div className="text-base font-bold text-purple-700 truncate">
-                  {nowPlaying.artist}
-                </div>
+              <div className="space-y-0.5 overflow-hidden">
+                <Marquee
+                  text={nowPlaying.title}
+                  className="text-xl font-black text-gray-800 leading-tight"
+                />
+                <Marquee
+                  text={nowPlaying.artist}
+                  className="text-base font-bold text-purple-700"
+                />
               </div>
             ) : (
               <div className="text-lg text-gray-600 animate-pulse">Loading...</div>
@@ -130,15 +139,15 @@ export function CassettePlayer() {
               <div className="w-6 h-2 bg-gray-800 rounded-sm shadow-inner" />
               <div className="w-6 h-2 bg-gray-800 rounded-sm shadow-inner" />
             </div>
-            
+
             {/* Reels row */}
             <div className="relative">
               <div className="flex justify-around items-center px-8">
                 {/* Left Reel */}
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 via-pink-500 to-red-500 flex items-center justify-center shadow-xl">
                   <div className="w-11 h-11 rounded-full bg-gray-900 flex items-center justify-center">
-                    <div className={`w-8 h-8 rounded-full border-2 border-gray-700 ${isPlaying ? 'animate-spin' : ''}`} 
-                         style={{ animationDuration: '4s', animationTimingFunction: 'linear' }}>
+                    <div className={`w-8 h-8 rounded-full border-2 border-gray-700 ${isPlaying ? 'animate-spin' : ''}`}
+                      style={{ animationDuration: '4s', animationTimingFunction: 'linear' }}>
                       <div className="w-full h-full relative">
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="w-full h-0.5 bg-gray-600" />
@@ -161,7 +170,7 @@ export function CassettePlayer() {
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 via-pink-500 to-red-500 flex items-center justify-center shadow-xl">
                   <div className="w-11 h-11 rounded-full bg-gray-900 flex items-center justify-center">
                     <div className={`w-8 h-8 rounded-full border-2 border-gray-700 ${isPlaying ? 'animate-spin' : ''}`}
-                         style={{ animationDuration: '4s', animationTimingFunction: 'linear' }}>
+                      style={{ animationDuration: '4s', animationTimingFunction: 'linear' }}>
                       <div className="w-full h-full relative">
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="w-full h-0.5 bg-gray-600" />
@@ -194,30 +203,30 @@ export function CassettePlayer() {
 
         {/* Controls - Compact */}
         <div className="flex items-center justify-center gap-4 bg-white bg-opacity-10 backdrop-blur-md rounded-2xl p-4 shadow-xl">
-<button
-  onClick={togglePlay}
-  className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 shadow-xl hover:shadow-2xl transition-all hover:scale-105 active:scale-95 border-4 border-purple-900 flex items-center justify-center"
->
-  {isPlaying ? (
-    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-    </svg>
-  ) : (
-    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M8 5v14l11-7z"/>
-    </svg>
-  )}
-</button>
+          <button
+            onClick={togglePlay}
+            className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 shadow-xl hover:shadow-2xl transition-all hover:scale-105 active:scale-95 border-4 border-purple-900 flex items-center justify-center"
+          >
+            {isPlaying ? (
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </button>
 
           <div className="flex items-center gap-3 flex-1 max-w-md">
-            <span className="text-white text-xl">🔊</span>
+            <Volume2 className="w-6 h-6 text-white" />
             <input
               type="range"
               min="0"
               max="100"
               value={volume}
               onChange={(e) => setVolume(Number(e.target.value))}
-              className="flex-1 h-2 bg-purple-300 rounded-lg appearance-none cursor-pointer accent-purple-600"
+              className="volume-slider flex-1"
             />
             <span className="text-white text-sm font-mono w-12 text-right font-bold">{volume}%</span>
           </div>
@@ -226,46 +235,56 @@ export function CassettePlayer() {
         {/* Status - Compact */}
         <div className="text-center">
           <div className="inline-flex items-center gap-2 bg-white bg-opacity-20 backdrop-blur-md rounded-full px-4 py-2 shadow-lg">
-            <div className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400' : 'bg-gray-400'}`} />
+            <div className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-green-400 animate-glow' : 'bg-gray-400'}`} />
             <span className="text-white text-sm font-bold tracking-wider">
               {isPlaying ? 'LIVE' : 'PAUSED'}
             </span>
           </div>
         </div>
-		
-		{/* Navigation Links */}
-<div className="flex justify-center gap-4">
-  <Link
-    to="/stats"
-    className="text-purple-200 hover:text-white transition-colors text-sm font-semibold"
-  >
-    📊 Stats
-  </Link>
-  <span className="text-purple-400">•</span>
-  <Link
-    to="/about"
-    className="text-purple-200 hover:text-white transition-colors text-sm font-semibold"
-  >
-    ℹ️ About
-  </Link>
-</div>
-		
-		{/* Install button - add after the Status section */}
-{showInstallButton && (
-  <div className="text-center">
-    <button
-      onClick={handleInstallClick}
-      className="inline-flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-all hover:scale-105"
-    >
-      <span>📱</span>
-      <span>Install App</span>
-    </button>
-  </div>
-)}
+
+        {/* Navigation Links */}
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={() => setActiveModal('stats')}
+            className="text-purple-200 hover:text-white transition-colors text-sm font-semibold flex items-center gap-2"
+          >
+            <BarChart2 className="w-4 h-4" /> Stats
+          </button>
+          <span className="text-purple-400">•</span>
+          <button
+            onClick={() => setActiveModal('about')}
+            className="text-purple-200 hover:text-white transition-colors text-sm font-semibold flex items-center gap-2"
+          >
+            <Info className="w-4 h-4" /> About
+          </button>
+        </div>
+
+        {/* Install button - add after the Status section */}
+        {showInstallButton && (
+          <div className="text-center">
+            <button
+              onClick={handleInstallClick}
+              className="inline-flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-all hover:scale-105"
+            >
+              <span>📱</span>
+              <span>Install App</span>
+            </button>
+          </div>
+        )}
 
         {/* Hidden Audio Element */}
         <audio ref={audioRef} src={STREAM_URL} />
       </div>
+
+      {/* Modals */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full h-full">
+            {activeModal === 'stats' && <StatsPage onClose={() => setActiveModal(null)} />}
+            {activeModal === 'about' && <AboutPage onClose={() => setActiveModal(null)} />}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
