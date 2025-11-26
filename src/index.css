@@ -80,4 +80,21 @@
     .clip-path-trapezoid {
         clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 100%);
     }
+
+    /* Responsive gear teeth positioning */
+    .gear-tooth-mobile {
+        transform: translate(-50%, -50%) rotate(var(--tooth-rotation)) translateY(-22px);
+    }
+
+    @media (min-width: 640px) {
+        .gear-tooth-mobile {
+            transform: translate(-50%, -50%) rotate(var(--tooth-rotation)) translateY(-25px);
+        }
+    }
+
+    @media (min-width: 768px) {
+        .gear-tooth-mobile {
+            transform: translate(-50%, -50%) rotate(var(--tooth-rotation)) translateY(-28px);
+        }
+    }
 }
