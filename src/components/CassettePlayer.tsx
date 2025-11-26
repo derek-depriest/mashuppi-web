@@ -4,12 +4,14 @@ import { api, STREAM_URL, type Track, type NowPlaying } from '@/services/api';
 import { StatsPage } from '@/pages/StatsPage';
 import { AboutPage } from '@/pages/AboutPage';
 import { Marquee } from './Marquee';
-import { BarChart2, Info, Volume2 } from 'lucide-react';
+import { BarChart2, Info, Volume2, VolumeX } from 'lucide-react';
 
 export function CassettePlayer() {
   const [nowPlaying, setNowPlaying] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false); // Start paused
   const [volume, setVolume] = useState(50);
+  const [isMuted, setIsMuted] = useState(false);
+  const [previousVolume, setPreviousVolume] = useState(50);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
@@ -92,9 +94,10 @@ export function CassettePlayer() {
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = volume / 100;
+      const newVolume = isMuted ? 0 : volume / 100;
+      audioRef.current.volume = newVolume;
     }
-  }, [volume]);
+  }, [volume, isMuted]);
 
   const togglePlay = () => {
     if (!audioRef.current) return;
@@ -105,6 +108,18 @@ export function CassettePlayer() {
     } else {
       audioRef.current.play();
       setIsPlaying(true);
+    }
+  };
+
+  const toggleMute = () => {
+    if (isMuted) {
+      // Unmute - restore previous volume
+      setVolume(previousVolume);
+      setIsMuted(false);
+    } else {
+      // Mute - save current volume and set to 0
+      setPreviousVolume(volume);
+      setIsMuted(true);
     }
   };
 
@@ -125,7 +140,7 @@ export function CassettePlayer() {
         {/* Cassette Card - v2 Design */}
         <div
           onClick={togglePlay}
-          className="relative w-full max-w-[600px] mx-auto bg-zinc-800 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-4 border-b-8 border-r-8 border-zinc-900 transform transition-transform hover:scale-105 duration-300 cursor-pointer"
+          className="relative w-full max-w-[600px] mx-auto bg-zinc-800 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-3 sm:p-4 border-b-4 sm:border-b-6 md:border-b-8 border-r-4 sm:border-r-6 md:border-r-8 border-zinc-900 transform transition-transform hover:scale-105 duration-300 cursor-pointer"
         >
           {/* Screw Top Left */}
           <div className="absolute top-4 left-4 w-4 h-4 bg-zinc-400 rounded-full flex items-center justify-center shadow-inner">
@@ -149,17 +164,17 @@ export function CassettePlayer() {
           </div>
 
           {/* Main Label Area */}
-          <div className="w-[90%] h-[280px] bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 rounded-xl shadow-md relative overflow-hidden flex flex-col items-center pt-4">
+          <div className="w-[90%] h-[280px] md:h-[320px] bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 rounded-xl shadow-md relative overflow-hidden flex flex-col items-center pt-4">
             {/* Label Text */}
-            <div className="w-full px-8 mb-2" onClick={(e) => e.stopPropagation()}>
-              <div className="w-full bg-white/90 rounded-sm flex flex-col px-4 py-2 font-handwriting text-zinc-800 shadow-sm transform -rotate-1">
+            <div className="w-full px-4 sm:px-6 md:px-8 mb-2" onClick={(e) => e.stopPropagation()}>
+              <div className="w-full bg-white/90 rounded-sm flex flex-col px-3 sm:px-4 py-2 font-handwriting text-zinc-800 shadow-sm transform -rotate-1">
                 {nowPlaying ? (
                   <>
-                    <Marquee text={nowPlaying.title} className="text-xl leading-tight" />
-                    <Marquee text={nowPlaying.artist} className="text-base opacity-70" />
+                    <Marquee text={nowPlaying.title} className="text-lg sm:text-xl leading-tight" />
+                    <Marquee text={nowPlaying.artist} className="text-sm sm:text-base opacity-70" />
                   </>
                 ) : (
-                  <div className="text-lg animate-pulse">Loading...</div>
+                  <div className="text-base sm:text-lg animate-pulse">Loading...</div>
                 )}
               </div>
               <div className="w-full h-0.5 bg-zinc-800/20 mt-2"></div>
@@ -167,29 +182,29 @@ export function CassettePlayer() {
             </div>
 
             {/* Central Window Area */}
-            <div className="w-[70%] h-[120px] bg-zinc-800 rounded-full mt-2 flex items-center justify-center relative shadow-inner border-2 border-zinc-700">
+            <div className="w-[85%] sm:w-[75%] md:w-[70%] h-[100px] sm:h-[110px] md:h-[120px] bg-zinc-800 rounded-full mt-2 flex items-center justify-center relative shadow-inner border-2 border-zinc-700">
               {/* Left Reel */}
-              <div className={`absolute left-6 w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md border-4 border-zinc-300 ${isPlaying ? 'animate-spin-slow' : ''}`}>
+              <div className={`absolute left-2 sm:left-4 md:left-6 w-16 sm:w-18 md:w-20 h-16 sm:h-18 md:h-20 bg-white rounded-full flex items-center justify-center shadow-md border-2 sm:border-3 md:border-4 border-zinc-300 ${isPlaying ? 'animate-spin-slow' : ''}`}>
                 <div className="w-full h-full relative">
                   {[...Array(6)].map((_, i) => (
-                    <div key={i} className="absolute top-1/2 left-1/2 w-3 h-6 bg-zinc-800 -translate-x-1/2 -translate-y-1/2" style={{ transform: `translate(-50%, -50%) rotate(${i * 60}deg) translateY(-28px)` }}></div>
+                    <div key={i} className="absolute top-1/2 left-1/2 w-2 sm:w-2.5 md:w-3 h-4 sm:h-5 md:h-6 bg-zinc-800 gear-tooth-mobile" style={{ '--tooth-rotation': `${i * 60}deg` } as React.CSSProperties}></div>
                   ))}
-                  <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-zinc-300"></div>
+                  <div className="absolute top-1/2 left-1/2 w-12 sm:w-14 md:w-16 h-12 sm:h-14 md:h-16 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-zinc-300"></div>
                 </div>
               </div>
 
               {/* Right Reel */}
-              <div className={`absolute right-6 w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md border-4 border-zinc-300 ${isPlaying ? 'animate-spin-slow' : ''}`}>
+              <div className={`absolute right-2 sm:right-4 md:right-6 w-16 sm:w-18 md:w-20 h-16 sm:h-18 md:h-20 bg-white rounded-full flex items-center justify-center shadow-md border-2 sm:border-3 md:border-4 border-zinc-300 ${isPlaying ? 'animate-spin-slow' : ''}`}>
                 <div className="w-full h-full relative">
                   {[...Array(6)].map((_, i) => (
-                    <div key={i} className="absolute top-1/2 left-1/2 w-3 h-6 bg-zinc-800 -translate-x-1/2 -translate-y-1/2" style={{ transform: `translate(-50%, -50%) rotate(${i * 60}deg) translateY(-28px)` }}></div>
+                    <div key={i} className="absolute top-1/2 left-1/2 w-2 sm:w-2.5 md:w-3 h-4 sm:h-5 md:h-6 bg-zinc-800 gear-tooth-mobile" style={{ '--tooth-rotation': `${i * 60}deg` } as React.CSSProperties}></div>
                   ))}
-                  <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-zinc-300"></div>
+                  <div className="absolute top-1/2 left-1/2 w-12 sm:w-14 md:w-16 h-12 sm:h-14 md:h-16 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-zinc-300"></div>
                 </div>
               </div>
 
               {/* Tape Window (Transparent part) */}
-              <div className="w-40 h-16 bg-zinc-900/50 backdrop-blur-sm z-10 rounded-md border border-zinc-600/50 flex items-center justify-center overflow-hidden">
+              <div className="w-32 sm:w-36 md:w-40 h-12 sm:h-14 md:h-16 bg-zinc-900/50 backdrop-blur-sm z-10 rounded-md border border-zinc-600/50 flex items-center justify-center overflow-hidden">
                 {isPlaying && (
                   <div className="w-full h-full flex items-center justify-center space-x-1 opacity-30">
                     <div className="w-full h-0.5 bg-zinc-400 animate-pulse"></div>
@@ -231,16 +246,37 @@ export function CassettePlayer() {
           </button>
 
           <div className="flex items-center gap-3 flex-1 max-w-md">
-            <Volume2 className="w-6 h-6 text-white" />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('[Mute] Button clicked!');
+                toggleMute();
+              }}
+              className="transition-all hover:scale-110 active:scale-95 cursor-pointer"
+              aria-label={isMuted ? "Unmute" : "Mute"}
+              title={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted ? (
+                <VolumeX className="w-6 h-6 text-white opacity-60" />
+              ) : (
+                <Volume2 className="w-6 h-6 text-white" />
+              )}
+            </button>
             <input
               type="range"
               min="0"
               max="100"
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
+              value={isMuted ? 0 : volume}
+              onChange={(e) => {
+                const newVolume = Number(e.target.value);
+                setVolume(newVolume);
+                if (isMuted && newVolume > 0) {
+                  setIsMuted(false);
+                }
+              }}
               className="volume-slider flex-1"
             />
-            <span className="text-white text-sm font-mono w-12 text-right font-bold">{volume}%</span>
+            <span className="text-white text-sm font-mono w-12 text-right font-bold">{isMuted ? 0 : volume}%</span>
           </div>
         </div>
 
