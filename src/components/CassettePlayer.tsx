@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import { Card } from '@/components/ui/card';
 import { CassetteLogo } from './CassetteLogo';
 import { api, STREAM_URL, type Track, type NowPlaying } from '@/services/api';
 import { StatsPage } from '@/pages/StatsPage';
@@ -123,106 +122,96 @@ export function CassettePlayer() {
           </p>
         </div>
 
-        {/* Cassette Card - Compact */}
-        <Card
+        {/* Cassette Card - v2 Design */}
+        <div
           onClick={togglePlay}
-          className="relative p-6 bg-gradient-to-br from-purple-500 to-purple-700 border-4 border-purple-900 shadow-2xl rounded-2xl cursor-pointer hover:scale-[1.02] transition-transform duration-200 active:scale-[0.98]"
+          className="relative w-full max-w-[600px] mx-auto bg-zinc-800 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-4 border-b-8 border-r-8 border-zinc-900 transform transition-transform hover:scale-105 duration-300 cursor-pointer"
         >
-          {/* Corner screws */}
-          <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-gray-800 shadow-inner border border-gray-900" />
-          <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-gray-800 shadow-inner border border-gray-900" />
-          <div className="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-gray-800 shadow-inner border border-gray-900" />
-          <div className="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-gray-800 shadow-inner border border-gray-900" />
-
-          {/* Label Area - Now Playing */}
-          <div className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 rounded-xl p-4 mb-4 shadow-inner" onClick={(e) => e.stopPropagation()}>
-            <div className="text-xs text-gray-600 uppercase tracking-[0.15em] mb-1 font-bold">
-              Now Playing
-            </div>
-            {nowPlaying ? (
-              <div className="space-y-0.5 overflow-hidden">
-                <Marquee
-                  text={nowPlaying.title}
-                  className="text-xl font-black text-gray-800 leading-tight"
-                />
-                <Marquee
-                  text={nowPlaying.artist}
-                  className="text-base font-bold text-purple-700"
-                />
-              </div>
-            ) : (
-              <div className="text-lg text-gray-600 animate-pulse">Loading...</div>
-            )}
+          {/* Screw Top Left */}
+          <div className="absolute top-4 left-4 w-4 h-4 bg-zinc-400 rounded-full flex items-center justify-center shadow-inner">
+            <div className="w-3 h-0.5 bg-zinc-600 rotate-45"></div>
+            <div className="w-3 h-0.5 bg-zinc-600 -rotate-45 absolute"></div>
+          </div>
+          {/* Screw Top Right */}
+          <div className="absolute top-4 right-4 w-4 h-4 bg-zinc-400 rounded-full flex items-center justify-center shadow-inner">
+            <div className="w-3 h-0.5 bg-zinc-600 rotate-45"></div>
+            <div className="w-3 h-0.5 bg-zinc-600 -rotate-45 absolute"></div>
+          </div>
+          {/* Screw Bottom Left */}
+          <div className="absolute bottom-4 left-4 w-4 h-4 bg-zinc-400 rounded-full flex items-center justify-center shadow-inner">
+            <div className="w-3 h-0.5 bg-zinc-600 rotate-45"></div>
+            <div className="w-3 h-0.5 bg-zinc-600 -rotate-45 absolute"></div>
+          </div>
+          {/* Screw Bottom Right */}
+          <div className="absolute bottom-4 right-4 w-4 h-4 bg-zinc-400 rounded-full flex items-center justify-center shadow-inner">
+            <div className="w-3 h-0.5 bg-zinc-600 rotate-45"></div>
+            <div className="w-3 h-0.5 bg-zinc-600 -rotate-45 absolute"></div>
           </div>
 
-          {/* Cassette mechanism */}
-          <div className="space-y-3">
-            {/* Top row buttons */}
-            <div className="flex justify-center gap-6">
-              <div className="w-6 h-2 bg-gray-800 rounded-sm shadow-inner" />
-              <div className="w-6 h-2 bg-gray-800 rounded-sm shadow-inner" />
+          {/* Main Label Area */}
+          <div className="w-[90%] h-[280px] bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 rounded-xl shadow-md relative overflow-hidden flex flex-col items-center pt-4">
+            {/* Label Text */}
+            <div className="w-full px-8 mb-2" onClick={(e) => e.stopPropagation()}>
+              <div className="w-full bg-white/90 rounded-sm flex flex-col px-4 py-2 font-handwriting text-zinc-800 shadow-sm transform -rotate-1">
+                {nowPlaying ? (
+                  <>
+                    <Marquee text={nowPlaying.title} className="text-xl leading-tight" />
+                    <Marquee text={nowPlaying.artist} className="text-base opacity-70" />
+                  </>
+                ) : (
+                  <div className="text-lg animate-pulse">Loading...</div>
+                )}
+              </div>
+              <div className="w-full h-0.5 bg-zinc-800/20 mt-2"></div>
+              <div className="w-full h-0.5 bg-zinc-800/20 mt-1"></div>
             </div>
 
-            {/* Reels row */}
-            <div className="relative">
-              <div className="flex justify-around items-center px-8">
-                {/* Left Reel */}
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 via-pink-500 to-red-500 flex items-center justify-center shadow-xl">
-                  <div className="w-11 h-11 rounded-full bg-gray-900 flex items-center justify-center">
-                    <div className={`w-8 h-8 rounded-full border-2 border-gray-700 ${isPlaying ? 'animate-spin' : ''}`}
-                      style={{ animationDuration: '4s', animationTimingFunction: 'linear' }}>
-                      <div className="w-full h-full relative">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-full h-0.5 bg-gray-600" />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center rotate-45">
-                          <div className="w-full h-0.5 bg-gray-600" />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center rotate-90">
-                          <div className="w-full h-0.5 bg-gray-600" />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center -rotate-45">
-                          <div className="w-full h-0.5 bg-gray-600" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Reel */}
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 via-pink-500 to-red-500 flex items-center justify-center shadow-xl">
-                  <div className="w-11 h-11 rounded-full bg-gray-900 flex items-center justify-center">
-                    <div className={`w-8 h-8 rounded-full border-2 border-gray-700 ${isPlaying ? 'animate-spin' : ''}`}
-                      style={{ animationDuration: '4s', animationTimingFunction: 'linear' }}>
-                      <div className="w-full h-full relative">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-full h-0.5 bg-gray-600" />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center rotate-45">
-                          <div className="w-full h-0.5 bg-gray-600" />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center rotate-90">
-                          <div className="w-full h-0.5 bg-gray-600" />
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center -rotate-45">
-                          <div className="w-full h-0.5 bg-gray-600" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            {/* Central Window Area */}
+            <div className="w-[70%] h-[120px] bg-zinc-800 rounded-full mt-2 flex items-center justify-center relative shadow-inner border-2 border-zinc-700">
+              {/* Left Reel */}
+              <div className={`absolute left-6 w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md border-4 border-zinc-300 ${isPlaying ? 'animate-spin-slow' : ''}`}>
+                <div className="w-full h-full relative">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="absolute top-1/2 left-1/2 w-3 h-6 bg-zinc-800 -translate-x-1/2 -translate-y-1/2" style={{ transform: `translate(-50%, -50%) rotate(${i * 60}deg) translateY(-28px)` }}></div>
+                  ))}
+                  <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-zinc-300"></div>
                 </div>
               </div>
 
-              {/* Tape between reels */}
-              <div className="absolute top-1/2 left-1/4 right-1/4 h-1 bg-gray-800 -translate-y-1/2 rounded-full shadow-inner" />
+              {/* Right Reel */}
+              <div className={`absolute right-6 w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md border-4 border-zinc-300 ${isPlaying ? 'animate-spin-slow' : ''}`}>
+                <div className="w-full h-full relative">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="absolute top-1/2 left-1/2 w-3 h-6 bg-zinc-800 -translate-x-1/2 -translate-y-1/2" style={{ transform: `translate(-50%, -50%) rotate(${i * 60}deg) translateY(-28px)` }}></div>
+                  ))}
+                  <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 border-2 border-zinc-300"></div>
+                </div>
+              </div>
+
+              {/* Tape Window (Transparent part) */}
+              <div className="w-40 h-16 bg-zinc-900/50 backdrop-blur-sm z-10 rounded-md border border-zinc-600/50 flex items-center justify-center overflow-hidden">
+                {isPlaying && (
+                  <div className="w-full h-full flex items-center justify-center space-x-1 opacity-30">
+                    <div className="w-full h-0.5 bg-zinc-400 animate-pulse"></div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Tape Window */}
-            <div className="flex justify-center px-6">
-              <div className="flex-1 h-6 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded shadow-inner border border-gray-700" />
-            </div>
+            {/* Side A/B Markings */}
+            <div className="absolute top-4 left-4 text-zinc-900 font-bold text-xl opacity-70">A</div>
+            <div className="absolute bottom-4 right-4 text-zinc-900 font-bold text-xs opacity-70">NR [Yes] [No]</div>
           </div>
-        </Card>
+
+          {/* Bottom Trapezoid Area */}
+          <div className="w-[75%] h-[60px] bg-zinc-700 mt-auto mb-2 clip-path-trapezoid flex items-center justify-between px-8 relative rounded-b-lg">
+            {/* Holes */}
+            <div className="w-3 h-3 bg-black rounded-full shadow-inner"></div>
+            <div className="w-3 h-3 bg-black rounded-full shadow-inner"></div>
+            <div className="w-3 h-3 bg-black rounded-full shadow-inner"></div>
+            <div className="w-3 h-3 bg-black rounded-full shadow-inner"></div>
+          </div>
+        </div>
 
         {/* Controls - Compact */}
         <div className="flex items-center justify-center gap-4 bg-white bg-opacity-10 backdrop-blur-md rounded-2xl p-4 shadow-xl">

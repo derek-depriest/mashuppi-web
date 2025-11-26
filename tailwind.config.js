@@ -7,6 +7,12 @@ export default {
   ],
   theme: {
   	extend: {
+  		animation: {
+  			'spin-slow': 'spin 3s linear infinite',
+  		},
+  		fontFamily: {
+  			'handwriting': ['"Permanent Marker"', 'cursive'],
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',

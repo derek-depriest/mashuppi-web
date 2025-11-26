@@ -75,4 +75,9 @@
         box-shadow: 0 0 0 2px #a855f7;
         /* purple-500 ring */
     }
+
+    /* Clip path utility for trapezoid shapes */
+    .clip-path-trapezoid {
+        clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 100%);
+    }
 }
