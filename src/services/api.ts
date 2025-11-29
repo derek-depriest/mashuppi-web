@@ -7,12 +7,32 @@ export interface Track {
   artist: string;
   title: string;
   raw: string;
+  album?: string | null;
+  duration?: number | null;
 }
 
 export interface NowPlaying {
   track: Track | null;
   isPlaying: boolean;
   timestamp: string;
+  position?: number | null;
+  queueLength?: number | null;
+  elapsed?: number | null;
+  total?: number | null;
+  percentage?: number | null;
+  nextTrack?: Track | null;
+  listeners?: number;
+  peakListeners?: number;
+}
+
+export interface ListenerStats {
+  listeners: number;
+  peakListeners: number;
+  serverName?: string;
+  serverDescription?: string;
+  bitrate?: number;
+  audioInfo?: string | null;
+  streamStart?: string | null;
 }
 
 export const api = {
@@ -33,6 +53,11 @@ export const api = {
 
   getHistory: async () => {
     const response = await axios.get(`${API_BASE}/history`);
+    return response.data;
+  },
+
+  getListeners: async (): Promise<ListenerStats> => {
+    const response = await axios.get(`${API_BASE}/listeners`);
     return response.data;
   }
 };

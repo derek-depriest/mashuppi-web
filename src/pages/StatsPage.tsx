@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '@/services/api';
+import { api, type ListenerStats } from '@/services/api';
 
 interface Stats {
   artists: string;
@@ -20,10 +20,19 @@ interface RecentTrack {
 export function StatsPage({ onClose }: { onClose?: () => void }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [history, setHistory] = useState<RecentTrack[]>([]);
+  const [listenerStats, setListenerStats] = useState<ListenerStats | null>(null);
 
   useEffect(() => {
     api.getStats().then(setStats);
     api.getHistory().then(data => setHistory(data.tracks));
+    api.getListeners().then(setListenerStats);
+
+    // Refresh listener stats every 5 seconds
+    const interval = setInterval(() => {
+      api.getListeners().then(setListenerStats);
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const isModal = !!onClose;
@@ -54,7 +63,7 @@ export function StatsPage({ onClose }: { onClose?: () => void }) {
 
         {/* Stats Grid */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white bg-opacity-10 p-4 rounded-lg backdrop-blur-sm">
               <div className="text-purple-300 text-sm font-bold uppercase tracking-wider">Total Tracks</div>
               <div className="text-3xl font-black">{stats.songs}</div>
@@ -67,6 +76,13 @@ export function StatsPage({ onClose }: { onClose?: () => void }) {
               <div className="text-purple-300 text-sm font-bold uppercase tracking-wider">Playtime</div>
               <div className="text-3xl font-black">{stats.playtime}</div>
             </div>
+            {listenerStats && (
+              <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 p-4 rounded-lg backdrop-blur-sm border border-green-400/30">
+                <div className="text-green-300 text-sm font-bold uppercase tracking-wider">Live Listeners</div>
+                <div className="text-3xl font-black text-green-100">{listenerStats.listeners}</div>
+                <div className="text-xs text-green-200/70 mt-1">Peak: {listenerStats.peakListeners}</div>
+              </div>
+            )}
           </div>
         )}
 

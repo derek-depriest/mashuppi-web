@@ -16,6 +16,15 @@ export function CassettePlayer() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [activeModal, setActiveModal] = useState<'stats' | 'about' | null>(null);
+  const [position, setPosition] = useState<number | null>(null);
+  const [queueLength, setQueueLength] = useState<number | null>(null);
+  const [nextTrack, setNextTrack] = useState<Track | null>(null);
+  const [listeners, setListeners] = useState<number>(0);
+  const [albumArtUrl, setAlbumArtUrl] = useState<string | null>(null);
+  const [albumArtError, setAlbumArtError] = useState(false);
+  const [elapsed, setElapsed] = useState<number | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
+  const [percentage, setPercentage] = useState<number | null>(null);
 
   useEffect(() => {
     // Capture the install prompt event
@@ -52,10 +61,15 @@ export function CassettePlayer() {
   useEffect(() => {
     // Fetch initial now-playing
     const fetchNowPlaying = () => {
-      //console.log('[Heartbeat] Fetching now playing...');
       api.getNowPlaying().then((data: NowPlaying) => {
-        //console.log('[Heartbeat] Received:', data.track?.title || 'No track');
         setNowPlaying(data.track);
+        setPosition(data.position ?? null);
+        setQueueLength(data.queueLength ?? null);
+        setNextTrack(data.nextTrack ?? null);
+        setListeners(data.listeners ?? 0);
+        setElapsed(data.elapsed ?? null);
+        setTotal(data.total ?? null);
+        setPercentage(data.percentage ?? null);
       }).catch((error) => {
         console.error('[Heartbeat] Failed to fetch now playing:', error);
       });
@@ -65,8 +79,7 @@ export function CassettePlayer() {
     fetchNowPlaying();
 
     // Set up 10-second polling heartbeat
-    //console.log('[Heartbeat] Starting 10-second polling interval');
-    const heartbeatInterval = setInterval(fetchNowPlaying, 5000);
+    const heartbeatInterval = setInterval(fetchNowPlaying, 10000);
 
     // Set up WebSocket for real-time updates
     const ws = new WebSocket('wss://mashuppi.com/ws');
@@ -75,6 +88,13 @@ export function CassettePlayer() {
       const data = JSON.parse(event.data);
       if (data.type === 'track_change') {
         setNowPlaying(data.track);
+        setPosition(data.position ?? null);
+        setQueueLength(data.queueLength ?? null);
+        setNextTrack(data.nextTrack ?? null);
+        setListeners(data.listeners ?? 0);
+        setElapsed(data.elapsed ?? null);
+        setTotal(data.total ?? null);
+        setPercentage(data.percentage ?? null);
       }
     };
 
@@ -98,6 +118,65 @@ export function CassettePlayer() {
       audioRef.current.volume = newVolume;
     }
   }, [volume, isMuted]);
+
+  // Update elapsed time every second when playing
+  useEffect(() => {
+    if (!isPlaying || elapsed === null || total === null) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setElapsed(prev => {
+        if (prev === null || total === null) return prev;
+        // Don't go past the total duration
+        if (prev >= total) return prev;
+        const newElapsed = prev + 1;
+        // Update percentage too
+        setPercentage(Math.floor((newElapsed / total) * 100));
+        return newElapsed;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, elapsed, total]);
+
+  // Fetch album art when track changes
+  useEffect(() => {
+    if (!nowPlaying) {
+      setAlbumArtUrl(null);
+      setAlbumArtError(false);
+      return;
+    }
+
+    // Try to fetch album art with timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    const albumArtEndpoint = `/api/album-art?t=${timestamp}`;
+    const img = new Image();
+
+    img.onload = () => {
+      setAlbumArtUrl(albumArtEndpoint);
+      setAlbumArtError(false);
+    };
+
+    img.onerror = () => {
+      setAlbumArtUrl(null);
+      setAlbumArtError(true);
+    };
+
+    img.src = albumArtEndpoint;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [nowPlaying?.raw]);
+
+  // Format seconds to MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const togglePlay = () => {
     if (!audioRef.current) return;
@@ -124,7 +203,7 @@ export function CassettePlayer() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex items-center justify-center p-4 overflow-hidden relative">
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex items-center justify-center p-4 py-8 overflow-y-auto relative">
       <div className="w-full max-w-2xl space-y-4">
         {/* Logo - Compact */}
         <div className="text-center space-y-2">
@@ -167,14 +246,46 @@ export function CassettePlayer() {
           <div className="w-[90%] h-[280px] md:h-[320px] bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 rounded-xl shadow-md relative overflow-hidden flex flex-col items-center pt-4">
             {/* Label Text */}
             <div className="w-full px-4 sm:px-6 md:px-8 mb-2" onClick={(e) => e.stopPropagation()}>
-              <div className="w-full bg-white/90 rounded-sm flex flex-col px-3 sm:px-4 py-2 font-handwriting text-zinc-800 shadow-sm transform -rotate-1">
-                {nowPlaying ? (
-                  <>
-                    <Marquee text={nowPlaying.title} className="text-lg sm:text-xl leading-tight" />
-                    <Marquee text={nowPlaying.artist} className="text-sm sm:text-base opacity-70" />
-                  </>
-                ) : (
-                  <div className="text-base sm:text-lg animate-pulse">Loading...</div>
+              <div className="w-full bg-white/90 rounded-sm flex flex-row items-center gap-3 px-3 sm:px-4 py-2 font-handwriting text-zinc-800 shadow-sm transform -rotate-1">
+                {/* Album Art */}
+                {albumArtUrl && !albumArtError && (
+                  <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 bg-zinc-200 rounded shadow-md overflow-hidden">
+                    <img
+                      src={albumArtUrl}
+                      alt="Album art"
+                      className="w-full h-full object-cover"
+                      onError={() => setAlbumArtError(true)}
+                    />
+                  </div>
+                )}
+
+                {/* Track Info */}
+                <div className="flex-1 min-w-0 flex flex-col">
+                  {nowPlaying ? (
+                    <>
+                      <Marquee text={nowPlaying.title} className="text-lg sm:text-xl leading-tight" />
+                      <Marquee text={nowPlaying.artist} className="text-sm sm:text-base opacity-70" />
+                      {nowPlaying.album && (
+                        <div className="text-xs opacity-50 mt-1">{nowPlaying.album}</div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-base sm:text-lg animate-pulse">Loading...</div>
+                  )}
+                </div>
+              </div>
+              {/* Track position and next track info */}
+              <div className="w-full mt-2 text-xs text-zinc-900/60 font-bold space-y-0.5">
+                {position && queueLength && (
+                  <div>Track {position} of {queueLength}</div>
+                )}
+                {elapsed !== null && total !== null && percentage !== null && (
+                  <div className="font-mono">
+                    {formatTime(elapsed)}/{formatTime(total)} ({percentage}%)
+                  </div>
+                )}
+                {nextTrack && (
+                  <div className="truncate">Up Next: {nextTrack.artist} - {nextTrack.title}</div>
                 )}
               </div>
               <div className="w-full h-0.5 bg-zinc-800/20 mt-2"></div>
@@ -281,13 +392,20 @@ export function CassettePlayer() {
         </div>
 
         {/* Status - Compact */}
-        <div className="text-center">
+        <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 bg-white bg-opacity-20 backdrop-blur-md rounded-full px-4 py-2 shadow-lg">
             <div className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-green-400 animate-glow' : 'bg-gray-400'}`} />
             <span className="text-white text-sm font-bold tracking-wider">
               {isPlaying ? 'LIVE' : 'PAUSED'}
             </span>
           </div>
+          {listeners > 0 && (
+            <div className="inline-flex items-center gap-2 bg-white bg-opacity-10 backdrop-blur-md rounded-full px-3 py-1 shadow-md">
+              <span className="text-purple-200 text-xs font-semibold">
+                👥 {listeners} {listeners === 1 ? 'listener' : 'listeners'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Links */}
