@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import { CassetteLogo } from './CassetteLogo';
 import { api, STREAM_URL, type Track, type NowPlaying } from '@/services/api';
 import { StatsPage } from '@/pages/StatsPage';
 import { AboutPage } from '@/pages/AboutPage';
@@ -207,7 +206,11 @@ export function CassettePlayer() {
       <div className="w-full max-w-2xl space-y-4">
         {/* Logo - Compact */}
         <div className="text-center space-y-2">
-          <CassetteLogo className="w-20 h-16 mx-auto" />
+          <img
+            src="/mashuppi.png"
+            alt="mashuppi"
+            className="w-24 h-24 mx-auto drop-shadow-2xl"
+          />
           <h1 className="text-5xl font-black text-white tracking-wider drop-shadow-2xl">
             MASHUPPI
           </h1>
