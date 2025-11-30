@@ -255,86 +255,117 @@ app.get('/api/album-art', async (req, res) => {
     const escapedPath = current.replace(/"/g, '\\"').replace(/'/g, "\\'");
 
     // MPD albumart returns data in chunks, need to fetch all chunks
-    const chunks = [];
-    let offset = 0;
     const chunkSize = 8192; // MPD typically uses 8KB chunks
 
+    // Promisify the exec callback to properly handle async recursion
     const fetchChunk = (currentOffset) => {
-      exec(`printf 'albumart "%s" ${currentOffset}\\nclose\\n' "${escapedPath}" | nc -w 2 localhost 6600`, {
-        encoding: null,
-        maxBuffer: 10 * 1024 * 1024
-      }, async (error, stdout) => {
-        if (error) {
-          console.error('[Album Art] albumart command error:', error.message);
-          return tryReadpicture();
-        }
-
-        const responseStr = stdout.toString('utf8', 0, 200);
-
-        if (responseStr.includes('ACK')) {
-          // If this is the first chunk and we got an error, fall back
-          if (currentOffset === 0) {
-            console.error('[Album Art] MPD albumart error:', responseStr.split('\n')[0]);
-            return tryReadpicture();
+      return new Promise((resolve, reject) => {
+        exec(`printf 'albumart "%s" ${currentOffset}\\nclose\\n' "${escapedPath}" | nc -w 2 localhost 6600`, {
+          encoding: null,
+          maxBuffer: 10 * 1024 * 1024
+        }, (error, stdout) => {
+          if (error) {
+            console.error('[Album Art] albumart command error:', error.message);
+            return reject(new Error('albumart_failed'));
           }
-          // Otherwise, we're done collecting chunks
-          return sendCollectedImage();
-        }
 
-        const binaryMatch = responseStr.match(/binary: (\d+)/);
-        if (binaryMatch) {
-          const size = parseInt(binaryMatch[1]);
-          console.log(`[Album Art] Chunk at offset ${currentOffset}, size: ${size} bytes`);
+          const responseStr = stdout.toString('utf8', 0, 200);
 
-          const headerStr = stdout.toString('utf8', 0, 1000);
-          const binaryIndex = headerStr.indexOf('binary:');
-          const newlineAfterBinary = headerStr.indexOf('\n', binaryIndex);
-          const dataStart = newlineAfterBinary + 1;
-
-          const chunkData = stdout.subarray(dataStart, dataStart + size);
-          chunks.push(chunkData);
-
-          // If we got a full chunk, there might be more
-          if (size === chunkSize) {
-            return fetchChunk(currentOffset + size);
-          } else {
-            // Last chunk (smaller than chunkSize), send the complete image
-            return sendCollectedImage();
+          if (responseStr.includes('ACK')) {
+            // If this is the first chunk and we got an error, fall back
+            if (currentOffset === 0) {
+              console.error('[Album Art] MPD albumart error:', responseStr.split('\n')[0]);
+              return reject(new Error('albumart_failed'));
+            }
+            // Otherwise, we're done collecting chunks (no more data)
+            return resolve(null);
           }
-        }
 
-        console.log('[Album Art] No binary data found in albumart response');
-        return tryReadpicture();
+          const binaryMatch = responseStr.match(/binary: (\d+)/);
+          if (binaryMatch) {
+            const size = parseInt(binaryMatch[1]);
+            console.log(`[Album Art] Chunk at offset ${currentOffset}, size: ${size} bytes`);
+
+            const headerStr = stdout.toString('utf8', 0, 1000);
+            const binaryIndex = headerStr.indexOf('binary:');
+            const newlineAfterBinary = headerStr.indexOf('\n', binaryIndex);
+            const dataStart = newlineAfterBinary + 1;
+
+            const chunkData = stdout.subarray(dataStart, dataStart + size);
+
+            // Return chunk data and whether there are more chunks
+            return resolve({
+              data: chunkData,
+              hasMore: size === chunkSize
+            });
+          }
+
+          console.log('[Album Art] No binary data found in albumart response');
+          return reject(new Error('albumart_failed'));
+        });
       });
     };
 
-    const sendCollectedImage = () => {
-      if (chunks.length === 0) {
-        return tryReadpicture();
+    // Fetch all chunks recursively with proper async/await
+    const fetchAllChunks = async () => {
+      const chunks = [];
+      let offset = 0;
+
+      while (true) {
+        try {
+          const result = await fetchChunk(offset);
+
+          if (result === null) {
+            // No more chunks
+            break;
+          }
+
+          chunks.push(result.data);
+
+          if (!result.hasMore) {
+            // Last chunk received
+            break;
+          }
+
+          offset += chunkSize;
+        } catch (err) {
+          throw err;
+        }
       }
 
-      const imageData = Buffer.concat(chunks);
-      console.log(`[Album Art] Complete image collected, ${chunks.length} chunks, total size: ${imageData.length} bytes`);
-
-      let contentType = 'image/jpeg';
-      if (imageData[0] === 0x89 && imageData[1] === 0x50) {
-        contentType = 'image/png';
-      } else if (imageData[0] === 0xFF && imageData[1] === 0xD8) {
-        contentType = 'image/jpeg';
-      } else if (imageData[0] === 0x47 && imageData[1] === 0x49) {
-        contentType = 'image/gif';
-      }
-
-      console.log('[Album Art] Sending complete image, type:', contentType);
-      res.set('Content-Type', contentType);
-      res.set('Cache-Control', 'public, max-age=60');
-      return res.send(imageData);
+      return chunks;
     };
 
-    // Start fetching from offset 0
-    fetchChunk(0);
+    // Try to fetch album art via albumart command
+    try {
+      const chunks = await fetchAllChunks();
+
+      if (chunks.length > 0) {
+        const imageData = Buffer.concat(chunks);
+        console.log(`[Album Art] Complete image collected, ${chunks.length} chunks, total size: ${imageData.length} bytes`);
+
+        let contentType = 'image/jpeg';
+        if (imageData[0] === 0x89 && imageData[1] === 0x50) {
+          contentType = 'image/png';
+        } else if (imageData[0] === 0xFF && imageData[1] === 0xD8) {
+          contentType = 'image/jpeg';
+        } else if (imageData[0] === 0x47 && imageData[1] === 0x49) {
+          contentType = 'image/gif';
+        }
+
+        console.log('[Album Art] Sending complete image, type:', contentType);
+        res.set('Content-Type', contentType);
+        res.set('Cache-Control', 'public, max-age=60');
+        return res.send(imageData);
+      }
+    } catch (err) {
+      // Fall through to tryReadpicture
+      console.log('[Album Art] albumart method failed, trying fallbacks');
+    }
 
     // Fallback: Try readpicture command (MPD 0.22+)
+    tryReadpicture();
+
     function tryReadpicture() {
       console.log('[Album Art] Trying readpicture...');
       exec(`printf 'readpicture "%s" 0\\nclose\\n' "${escapedPath}" | nc -w 2 localhost 6600`, {

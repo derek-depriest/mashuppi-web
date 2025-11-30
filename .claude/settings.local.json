@@ -5,7 +5,10 @@
       "Bash(curl:*)",
       "Bash(python:*)",
       "Bash(npm install:*)",
-      "Bash(npm run dev:server:*)"
+      "Bash(npm run dev:server:*)",
+      "Bash(ssh:*)",
+      "Bash(.deploy.ps1 -DeployBackend)",
+      "Bash(powershell.exe:*)"
     ],
     "deny": [],
     "ask": []
