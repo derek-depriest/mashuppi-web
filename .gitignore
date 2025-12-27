@@ -25,3 +25,9 @@ dist-ssr
 
 # workspace files
 deploy.ps1
+mashuppi.db
+library-data/
+mashuppi-scanner/scan-and-deploy.ps1
+mashuppi-scanner/*.md
+mashuppi-scanner/package*.json
+nul

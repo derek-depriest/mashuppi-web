@@ -1,0 +1,81 @@
+{
+  "scannedAt": "2024-12-27T12:34:56.789Z",
+  "stats": {
+    "totalTracks": 155,
+    "totalAlbums": 12,
+    "totalArtists": 8,
+    "errors": 0
+  },
+  "artists": [
+    {
+      "id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+      "name": "Girl Talk"
+    },
+    {
+      "id": "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7",
+      "name": "The Airport District"
+    },
+    {
+      "id": "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8",
+      "name": "Milkman"
+    }
+  ],
+  "albums": [
+    {
+      "id": "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9",
+      "title": "All Day",
+      "artist": "Girl Talk",
+      "artistId": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+      "year": 2010,
+      "artworkUrl": "/album-art/d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9.jpg",
+      "trackCount": 12
+    },
+    {
+      "id": "e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+      "title": "Bombing The Casino",
+      "artist": "The Airport District",
+      "artistId": "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7",
+      "year": 2011,
+      "artworkUrl": "/album-art/e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0.jpg",
+      "trackCount": 15
+    }
+  ],
+  "tracks": [
+    {
+      "id": "f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1",
+      "title": "Oh No",
+      "artist": "Girl Talk",
+      "album": "All Day",
+      "albumId": "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9",
+      "artistId": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+      "trackNumber": 1,
+      "duration": 324,
+      "filePath": "Girl Talk/All Day/01 - Oh No.mp3",
+      "year": 2010
+    },
+    {
+      "id": "g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2",
+      "title": "Let It Out",
+      "artist": "Girl Talk",
+      "album": "All Day",
+      "albumId": "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9",
+      "artistId": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+      "trackNumber": 2,
+      "duration": 289,
+      "filePath": "Girl Talk/All Day/02 - Let It Out.mp3",
+      "year": 2010
+    },
+    {
+      "id": "h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3",
+      "title": "Still Here",
+      "artist": "Girl Talk",
+      "album": "All Day",
+      "albumId": "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9",
+      "artistId": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+      "trackNumber": 3,
+      "duration": 412,
+      "filePath": "Girl Talk/All Day/03 - Still Here.mp3",
+      "year": 2010
+    }
+  ]
+}
