@@ -202,6 +202,16 @@ async function getIcecastStats() {
         : response.data.icestats.source;
 
       if (source) {
+        const streamStart = source.stream_start || null;
+        let uptime = null;
+
+        // Calculate uptime in seconds if stream_start is available
+        if (streamStart) {
+          const startTime = new Date(streamStart);
+          const now = new Date();
+          uptime = Math.floor((now - startTime) / 1000); // uptime in seconds
+        }
+
         return {
           listeners: source.listeners || 0,
           peakListeners: source.listener_peak || 0,
@@ -209,12 +219,13 @@ async function getIcecastStats() {
           serverDescription: source.server_description || '',
           bitrate: source.bitrate || 128,
           audioInfo: source.audio_info || null,
-          streamStart: source.stream_start || null
+          streamStart: streamStart,
+          uptime: uptime
         };
       }
     }
 
-    return { listeners: 0, peakListeners: 0 };
+    return { listeners: 0, peakListeners: 0, uptime: null };
   } catch (error) {
     console.error('Failed to fetch Icecast stats:', error.message);
     return { listeners: 0, peakListeners: 0 };
@@ -257,6 +268,8 @@ app.get('/api/now-playing', async (req, res) => {
       nextTrack,
       listeners: icecastStats.listeners,
       peakListeners: icecastStats.peakListeners,
+      streamStart: icecastStats.streamStart || null,
+      uptime: icecastStats.uptime || null,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -614,6 +627,8 @@ setInterval(async () => {
             nextTrack,
             listeners: icecastStats.listeners,
             peakListeners: icecastStats.peakListeners,
+            streamStart: icecastStats.streamStart || null,
+            uptime: icecastStats.uptime || null,
             timestamp: new Date().toISOString()
           }));
         }
@@ -651,6 +666,8 @@ wss.on('connection', (ws) => {
         nextTrack,
         listeners: icecastStats.listeners,
         peakListeners: icecastStats.peakListeners,
+        streamStart: icecastStats.streamStart || null,
+        uptime: icecastStats.uptime || null,
         timestamp: new Date().toISOString()
       }));
     }

@@ -29,6 +29,8 @@ export interface NowPlaying {
   nextTrack?: Track | null;
   listeners?: number;
   peakListeners?: number;
+  streamStart?: string | null;
+  uptime?: number | null; // Stream uptime in seconds
 }
 
 export interface ListenerStats {

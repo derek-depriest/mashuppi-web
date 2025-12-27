@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { api, STREAM_URL } from '../services/api';
 import type { Track, NowPlaying } from '../services/api';
+import StreamStats from './StreamStats';
 
 const MashuppiPlayer: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -15,6 +16,8 @@ const MashuppiPlayer: React.FC = () => {
   const [queueLength, setQueueLength] = useState<number | null>(null);
   const [nextTrack, setNextTrack] = useState<Track | null>(null);
   const [listeners, setListeners] = useState<number>(0);
+  const [peakListeners, setPeakListeners] = useState<number>(0);
+  const [uptime, setUptime] = useState<number | null>(null);
   const [albumArtUrl, setAlbumArtUrl] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -41,6 +44,8 @@ const MashuppiPlayer: React.FC = () => {
       setQueueLength(data.queueLength ?? null);
       setNextTrack(data.nextTrack ?? null);
       setListeners(data.listeners ?? 0);
+      setPeakListeners(data.peakListeners ?? 0);
+      setUptime(data.uptime ?? null);
     } catch (error) {
       console.error('[MashuppiPlayer] Error fetching now playing:', error);
     }
@@ -108,6 +113,8 @@ const MashuppiPlayer: React.FC = () => {
             setQueueLength(data.queueLength ?? null);
             setNextTrack(data.nextTrack ?? null);
             setListeners(data.listeners ?? 0);
+            setPeakListeners(data.peakListeners ?? 0);
+            setUptime(data.uptime ?? null);
             setElapsed(data.elapsed ?? null);
             setTotal(data.total ?? null);
             setPercentage(data.percentage ?? null);
@@ -147,11 +154,12 @@ const MashuppiPlayer: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Update elapsed time every second when playing
+  // Update elapsed time and uptime every second when playing
   useEffect(() => {
     if (!isPlaying || elapsed === null || total === null) return;
 
     const interval = setInterval(() => {
+      // Increment elapsed time
       setElapsed((prev) => {
         if (prev === null || total === null) return prev;
         const newElapsed = prev + 1;
@@ -161,6 +169,12 @@ const MashuppiPlayer: React.FC = () => {
         const newPercentage = (newElapsed / total) * 100;
         setPercentage(newPercentage);
         return newElapsed;
+      });
+
+      // Increment uptime
+      setUptime((prev) => {
+        if (prev === null) return prev;
+        return prev + 1;
       });
     }, 1000);
 
@@ -417,6 +431,13 @@ const MashuppiPlayer: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Stream Statistics */}
+          <StreamStats
+            uptime={uptime}
+            listeners={listeners}
+            peakListeners={peakListeners}
+          />
 
           {/* Progress Bar */}
           <div style={{ marginBottom: '16px' }}>
