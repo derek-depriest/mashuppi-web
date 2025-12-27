@@ -53,6 +53,24 @@ const MashuppiPlayer: React.FC = () => {
       return;
     }
 
+    // If track has artworkUrl from database, use it directly
+    if (nowPlaying.artworkUrl) {
+      const img = new Image();
+      img.onload = () => {
+        setAlbumArtUrl(nowPlaying.artworkUrl!);
+      };
+      img.onerror = () => {
+        console.log('Failed to load artwork from database, falling back to API');
+        setAlbumArtUrl(null);
+      };
+      img.src = nowPlaying.artworkUrl;
+      return () => {
+        img.onload = null;
+        img.onerror = null;
+      };
+    }
+
+    // Fallback to /api/album-art endpoint
     const timestamp = Date.now();
     const artUrl = `/api/album-art?t=${timestamp}`;
 
@@ -70,7 +88,7 @@ const MashuppiPlayer: React.FC = () => {
       img.onload = null;
       img.onerror = null;
     };
-  }, [nowPlaying?.raw]);
+  }, [nowPlaying?.raw, nowPlaying?.artworkUrl]);
 
   // Setup WebSocket for real-time updates
   useEffect(() => {

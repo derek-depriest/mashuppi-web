@@ -3,6 +3,8 @@ const cors = require('cors');
 const { exec } = require('child_process');
 const WebSocket = require('ws');
 const axios = require('axios');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
 const app = express();
 const PORT = 3000;
@@ -12,19 +14,83 @@ const ICECAST_HOST = process.env.ICECAST_HOST || '127.0.0.1';
 const ICECAST_PORT = process.env.ICECAST_PORT || 8000;
 const ICECAST_MOUNT = process.env.ICECAST_MOUNT || '/mashups';
 
+// Database configuration
+const DB_PATH = process.env.DB_PATH || '/var/lib/mashuppi/mashuppi.db';
+const ARTWORK_BASE_URL = process.env.ARTWORK_BASE_URL || 'https://mashuppi.com/artwork';
+
+// Initialize database connection
+let db;
+try {
+  db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READONLY, (err) => {
+    if (err) {
+      console.error('Failed to connect to database:', err.message);
+      console.log('Running without database support');
+    } else {
+      console.log('Connected to mashuppi database at:', DB_PATH);
+    }
+  });
+} catch (err) {
+  console.error('Database initialization error:', err.message);
+  console.log('Running without database support');
+}
+
 // Enable CORS for React frontend
 app.use(cors());
 app.use(express.json());
 
+// Serve artwork files statically
+const ALBUM_ART_DIR = process.env.ALBUM_ART_DIR || '/var/lib/mashuppi/album-art';
+app.use('/album-art', express.static(ALBUM_ART_DIR, {
+  maxAge: '7d', // Cache for 7 days
+  etag: true
+}));
+console.log('Serving album art from:', ALBUM_ART_DIR);
+
 // Utility function to run mpc commands
 function runMpc(command) {
   return new Promise((resolve, reject) => {
-    exec(`mpc ${command}`, (error, stdout, stderr) => {
+    exec(`mpc ${command}`, (error, stdout) => {
       if (error) {
         reject(error);
         return;
       }
       resolve(stdout.trim());
+    });
+  });
+}
+
+// Query track metadata from database
+function getTrackFromDatabase(filePath) {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      return resolve(null);
+    }
+
+    const query = `
+      SELECT
+        t.id,
+        t.title,
+        t.artist,
+        t.album,
+        t.track_number,
+        t.duration,
+        t.year,
+        t.file_path,
+        a.artwork_url,
+        a.id as album_id,
+        ar.id as artist_id
+      FROM tracks t
+      LEFT JOIN albums a ON t.album_id = a.id
+      LEFT JOIN artists ar ON t.artist_id = ar.id
+      WHERE t.file_path = ?
+    `;
+
+    db.get(query, [filePath], (err, row) => {
+      if (err) {
+        console.error('Database query error:', err.message);
+        return resolve(null);
+      }
+      resolve(row);
     });
   });
 }
@@ -39,7 +105,36 @@ async function parseCurrentTrack(output) {
   if (lines.length === 0) return null;
 
   const trackInfo = lines[0];
-  // Try to split on common delimiters
+
+  // Get the file path from MPD
+  let filePath = null;
+  try {
+    filePath = await runMpc('current --format "%file%"');
+  } catch (error) {
+    console.error('Failed to get file path:', error.message);
+  }
+
+  // Try to get metadata from database first
+  if (filePath) {
+    const dbTrack = await getTrackFromDatabase(filePath);
+    if (dbTrack) {
+      return {
+        artist: dbTrack.artist,
+        title: dbTrack.title,
+        album: dbTrack.album,
+        duration: dbTrack.duration,
+        year: dbTrack.year,
+        trackNumber: dbTrack.track_number,
+        artworkUrl: dbTrack.artwork_url, // Already in correct format: /album-art/...
+        albumId: dbTrack.album_id,
+        artistId: dbTrack.artist_id,
+        filePath: dbTrack.file_path,
+        raw: trackInfo
+      };
+    }
+  }
+
+  // Fallback: Parse from mpc output
   let artist = 'Unknown Artist';
   let title = trackInfo;
 
@@ -64,7 +159,7 @@ async function parseCurrentTrack(output) {
     // Metadata not available, continue without it
   }
 
-  return { artist, title, raw: trackInfo, album, duration };
+  return { artist, title, raw: trackInfo, album, duration, filePath };
 }
 
 // Parse mpc status to get playback info
@@ -246,6 +341,16 @@ app.get('/api/album-art', async (req, res) => {
     }
 
     console.log('[Album Art] Fetching art for:', current);
+
+    // Try to get artwork URL from database first
+    const dbTrack = await getTrackFromDatabase(current);
+    if (dbTrack && dbTrack.artwork_url) {
+      console.log('[Album Art] Found artwork URL in database:', dbTrack.artwork_url);
+      // Redirect to the artwork URL
+      return res.redirect(dbTrack.artwork_url);
+    }
+
+    console.log('[Album Art] No artwork in database, falling back to MPD');
 
     const { exec } = require('child_process');
     const fs = require('fs');

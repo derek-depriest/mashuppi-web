@@ -9,6 +9,12 @@ export interface Track {
   raw: string;
   album?: string | null;
   duration?: number | null;
+  year?: number | null;
+  trackNumber?: number | null;
+  artworkUrl?: string | null;
+  albumId?: string | null;
+  artistId?: string | null;
+  filePath?: string | null;
 }
 
 export interface NowPlaying {
