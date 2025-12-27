@@ -32,7 +32,6 @@ const MashuppiPlayer: React.FC = () => {
   const fetchNowPlaying = async () => {
     try {
       const data: NowPlaying = await api.getNowPlaying();
-      console.log('[Now Playing] API Response - listeners:', data.listeners, 'isPlaying:', data.isPlaying);
       setNowPlaying(data.track);
       setIsPlaying(data.isPlaying);
       setElapsed(data.elapsed ?? null);
@@ -42,7 +41,6 @@ const MashuppiPlayer: React.FC = () => {
       setQueueLength(data.queueLength ?? null);
       setNextTrack(data.nextTrack ?? null);
       setListeners(data.listeners ?? 0);
-      console.log('[Now Playing] State updated - listeners set to:', data.listeners ?? 0);
     } catch (error) {
       console.error('[MashuppiPlayer] Error fetching now playing:', error);
     }
@@ -57,16 +55,13 @@ const MashuppiPlayer: React.FC = () => {
 
     const timestamp = Date.now();
     const artUrl = `/api/album-art?t=${timestamp}`;
-    console.log('[Album Art] Fetching for track:', nowPlaying.raw, 'URL:', artUrl);
 
     // Preload image
     const img = new Image();
     img.onload = () => {
-      console.log('[Album Art] SUCCESS - loaded:', artUrl);
       setAlbumArtUrl(artUrl);
     };
-    img.onerror = (e) => {
-      console.error('[Album Art] FAILED - could not load:', artUrl, e);
+    img.onerror = () => {
       setAlbumArtUrl(null);
     };
     img.src = artUrl;
