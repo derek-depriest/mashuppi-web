@@ -8,7 +8,7 @@ const app = express();
 const PORT = 3000;
 
 // Icecast configuration
-const ICECAST_HOST = process.env.ICECAST_HOST || 'localhost';
+const ICECAST_HOST = process.env.ICECAST_HOST || '127.0.0.1';
 const ICECAST_PORT = process.env.ICECAST_PORT || 8000;
 const ICECAST_MOUNT = process.env.ICECAST_MOUNT || '/mashups';
 
