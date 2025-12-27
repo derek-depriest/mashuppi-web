@@ -10,7 +10,7 @@ const PORT = 3000;
 // Icecast configuration
 const ICECAST_HOST = process.env.ICECAST_HOST || 'localhost';
 const ICECAST_PORT = process.env.ICECAST_PORT || 8000;
-const ICECAST_MOUNT = process.env.ICECAST_MOUNT || '/stream';
+const ICECAST_MOUNT = process.env.ICECAST_MOUNT || '/mashups';
 
 // Enable CORS for React frontend
 app.use(cors());

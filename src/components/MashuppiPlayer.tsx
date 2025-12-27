@@ -32,6 +32,7 @@ const MashuppiPlayer: React.FC = () => {
   const fetchNowPlaying = async () => {
     try {
       const data: NowPlaying = await api.getNowPlaying();
+      console.log('[Now Playing] API Response - listeners:', data.listeners, 'isPlaying:', data.isPlaying);
       setNowPlaying(data.track);
       setIsPlaying(data.isPlaying);
       setElapsed(data.elapsed ?? null);
@@ -41,30 +42,39 @@ const MashuppiPlayer: React.FC = () => {
       setQueueLength(data.queueLength ?? null);
       setNextTrack(data.nextTrack ?? null);
       setListeners(data.listeners ?? 0);
+      console.log('[Now Playing] State updated - listeners set to:', data.listeners ?? 0);
     } catch (error) {
-      console.error('Error fetching now playing:', error);
+      console.error('[MashuppiPlayer] Error fetching now playing:', error);
     }
   };
 
   // Fetch album artwork
   useEffect(() => {
-    if (!nowPlaying?.raw) {
+    if (!nowPlaying) {
       setAlbumArtUrl(null);
       return;
     }
 
     const timestamp = Date.now();
     const artUrl = `/api/album-art?t=${timestamp}`;
+    console.log('[Album Art] Fetching for track:', nowPlaying.raw, 'URL:', artUrl);
 
     // Preload image
     const img = new Image();
     img.onload = () => {
+      console.log('[Album Art] SUCCESS - loaded:', artUrl);
       setAlbumArtUrl(artUrl);
     };
-    img.onerror = () => {
+    img.onerror = (e) => {
+      console.error('[Album Art] FAILED - could not load:', artUrl, e);
       setAlbumArtUrl(null);
     };
     img.src = artUrl;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [nowPlaying?.raw]);
 
   // Setup WebSocket for real-time updates
@@ -80,10 +90,17 @@ const MashuppiPlayer: React.FC = () => {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'track_change') {
-            fetchNowPlaying();
+            setNowPlaying(data.track);
+            setPosition(data.position ?? null);
+            setQueueLength(data.queueLength ?? null);
+            setNextTrack(data.nextTrack ?? null);
+            setListeners(data.listeners ?? 0);
+            setElapsed(data.elapsed ?? null);
+            setTotal(data.total ?? null);
+            setPercentage(data.percentage ?? null);
           }
         } catch (error) {
-          console.error('WebSocket message error:', error);
+          console.error('[MashuppiPlayer] WebSocket message error:', error);
         }
       };
 
@@ -108,28 +125,13 @@ const MashuppiPlayer: React.FC = () => {
     };
   }, []);
 
-  // Fetch listener count separately
-  const fetchListeners = async () => {
-    try {
-      const data = await api.getListeners();
-      setListeners(data.listeners ?? 0);
-    } catch (error) {
-      console.error('Error fetching listeners:', error);
-    }
-  };
-
   // Initial fetch and polling fallback
   useEffect(() => {
     fetchNowPlaying();
-    fetchListeners();
 
-    const nowPlayingInterval = setInterval(fetchNowPlaying, 10000); // Poll every 10 seconds
-    const listenersInterval = setInterval(fetchListeners, 5000); // Poll every 5 seconds
+    const interval = setInterval(fetchNowPlaying, 10000); // Poll every 10 seconds
 
-    return () => {
-      clearInterval(nowPlayingInterval);
-      clearInterval(listenersInterval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   // Update elapsed time every second when playing
