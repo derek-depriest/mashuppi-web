@@ -21,7 +21,7 @@ const ARTWORK_BASE_URL = process.env.ARTWORK_BASE_URL || 'https://mashuppi.com/a
 // Initialize database connection
 let db;
 try {
-  db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READONLY, (err) => {
+  db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE, (err) => {
     if (err) {
       console.error('Failed to connect to database:', err.message);
       console.log('Running without database support');
@@ -91,6 +91,29 @@ function getTrackFromDatabase(filePath) {
         return resolve(null);
       }
       resolve(row);
+    });
+  });
+}
+
+// Query all tracks for an album
+function getAlbumTracks(albumId) {
+  return new Promise((resolve, reject) => {
+    if (!db) return reject(new Error('Database not available'));
+
+    const query = `
+      SELECT
+        t.id, t.title, t.artist, t.album, t.track_number,
+        t.duration, t.file_path, t.year,
+        a.artwork_url, a.id as album_id, a.title as album_title
+      FROM tracks t
+      LEFT JOIN albums a ON t.album_id = a.id
+      WHERE t.album_id = ?
+      ORDER BY t.track_number ASC
+    `;
+
+    db.all(query, [albumId], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows);
     });
   });
 }
@@ -570,6 +593,99 @@ app.get('/api/album-art', async (req, res) => {
   } catch (error) {
     console.error('[Album Art] Error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all albums
+app.get('/api/albums', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ error: 'Database not available' });
+    }
+
+    const query = `
+      SELECT
+        a.id, a.title, a.artist, a.year, a.artwork_url,
+        a.track_count, a.play_count, a.last_played,
+        ar.name as artist_name
+      FROM albums a
+      LEFT JOIN artists ar ON a.artist_id = ar.id
+      ORDER BY a.artist, a.year DESC, a.title
+    `;
+
+    db.all(query, [], (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ albums: rows });
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get album details with tracks
+app.get('/api/albums/:id', async (req, res) => {
+  try {
+    const albumId = req.params.id;
+    const tracks = await getAlbumTracks(albumId);
+
+    if (tracks.length === 0) {
+      return res.status(404).json({ error: 'Album not found' });
+    }
+
+    // Build album info from first track
+    const albumInfo = {
+      id: tracks[0].album_id,
+      title: tracks[0].album_title || tracks[0].album,
+      artist: tracks[0].artist,
+      artworkUrl: tracks[0].artwork_url,
+      trackCount: tracks.length,
+      tracks: tracks.map(t => ({
+        id: t.id,
+        title: t.title,
+        artist: t.artist,
+        album: t.album,
+        trackNumber: t.track_number,
+        duration: t.duration,
+        filePath: t.file_path,
+        year: t.year,
+        artworkUrl: t.artwork_url
+      }))
+    };
+
+    res.json(albumInfo);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Track album play
+app.post('/api/albums/:id/played', async (req, res) => {
+  try {
+    const albumId = req.params.id;
+
+    if (!db) {
+      console.log('[Album Play] Database not available');
+      return res.json({ success: true }); // Don't break UI
+    }
+
+    // Increment play count and update last_played
+    db.run(
+      'UPDATE albums SET play_count = play_count + 1, last_played = CURRENT_TIMESTAMP WHERE id = ?',
+      [albumId],
+      function(err) {
+        if (err) {
+          console.error('[Album Play] Error updating album:', albumId, err.message);
+          return res.json({ success: true }); // Don't break UI
+        }
+        console.log('[Album Play] Successfully tracked play for album:', albumId, '(rows affected:', this.changes, ')');
+        res.json({ success: true });
+      }
+    );
+  } catch (error) {
+    console.error('[Album Play] Unexpected error:', error.message);
+    res.json({ success: true }); // Don't break UI
   }
 });
 

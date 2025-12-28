@@ -9,7 +9,8 @@
       "Bash(ssh:*)",
       "Bash(.deploy.ps1 -DeployBackend)",
       "Bash(powershell.exe:*)",
-      "Bash(node generate-favicons.js:*)"
+      "Bash(node generate-favicons.js:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
