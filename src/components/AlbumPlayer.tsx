@@ -56,6 +56,9 @@ export default function AlbumPlayer({
     nextAudio.src = `https://mashuppi.com/music/${nextTrack.filePath}`;
     nextAudio.preload = 'auto';
     nextAudio.volume = volume / 100;
+
+    // Force load the next track immediately for true gapless playback
+    nextAudio.load();
   }, [nextTrack, volume]);
 
   // Update elapsed time
@@ -67,19 +70,32 @@ export default function AlbumPlayer({
     const handleTimeUpdate = () => {
       setElapsed(audio.currentTime);
       setDuration(audio.duration || currentTrack.duration || 0);
+
+      // Start next track 300ms before current ends for true gapless playback
+      if (nextTrack && nextAudioRef.current && audio.duration) {
+        const timeRemaining = audio.duration - audio.currentTime;
+        if (timeRemaining <= 0.3 && timeRemaining > 0 && nextAudioRef.current.paused) {
+          // Ensure next track is ready and start it
+          if (nextAudioRef.current.readyState >= 3) { // HAVE_FUTURE_DATA or better
+            nextAudioRef.current.play().catch(err => console.error('Next track play error:', err));
+          }
+        }
+      }
     };
 
     const handleEnded = () => {
-      // Gapless transition to next track
-      if (nextTrack && nextAudioRef.current) {
-        // Swap audio elements for seamless transition
+      // Swap to next track (should already be playing)
+      if (nextTrack && nextAudioRef.current && audioRef.current) {
         const temp = audioRef.current;
         audioRef.current = nextAudioRef.current;
         nextAudioRef.current = temp;
 
+        // Stop the old track
+        temp.pause();
+        temp.currentTime = 0;
+
         setCurrentIndex(prev => prev + 1);
         setIsPlaying(true);
-        audioRef.current.play();
       } else {
         // End of album
         setIsPlaying(false);
