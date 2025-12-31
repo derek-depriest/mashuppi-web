@@ -269,11 +269,55 @@ app.get('/api/now-playing', async (req, res) => {
     // Get next track
     let nextTrack = null;
     try {
-      const queued = await runMpc('queued');
-      if (queued) {
-        nextTrack = await parseCurrentTrack(queued);
+      // If we have a position and queue length, get the next track from the playlist
+      if (statusInfo.position && statusInfo.queueLength && statusInfo.position < statusInfo.queueLength) {
+        const nextPosition = statusInfo.position + 1;
+        const nextTrackOutput = await runMpc(`playlist -f "%artist% - %title%|%album%|%time%|%file%" | sed -n '${nextPosition}p'`);
+
+        if (nextTrackOutput && nextTrackOutput.trim()) {
+          const parts = nextTrackOutput.split('|');
+          const trackDisplay = parts[0] || nextTrackOutput;
+
+          let artist = 'Unknown Artist';
+          let title = trackDisplay;
+
+          if (trackDisplay.includes(' - ')) {
+            const trackParts = trackDisplay.split(' - ');
+            artist = trackParts[0].trim();
+            title = trackParts.slice(1).join(' - ').trim();
+          }
+
+          const album = parts[1] && parts[1] !== '' ? parts[1] : null;
+          const duration = parts[2] && parts[2] !== '' ? parseInt(parts[2]) : null;
+          const filePath = parts[3] && parts[3] !== '' ? parts[3] : null;
+
+          // Try to get metadata from database if we have a file path
+          if (filePath) {
+            const dbTrack = await getTrackFromDatabase(filePath);
+            if (dbTrack) {
+              nextTrack = {
+                artist: dbTrack.artist,
+                title: dbTrack.title,
+                album: dbTrack.album,
+                duration: dbTrack.duration,
+                year: dbTrack.year,
+                trackNumber: dbTrack.track_number,
+                artworkUrl: dbTrack.artwork_url,
+                albumId: dbTrack.album_id,
+                artistId: dbTrack.artist_id,
+                filePath: dbTrack.file_path,
+                raw: trackDisplay
+              };
+            } else {
+              nextTrack = { artist, title, album, duration, filePath, raw: trackDisplay };
+            }
+          } else {
+            nextTrack = { artist, title, album, duration, raw: trackDisplay };
+          }
+        }
       }
     } catch (error) {
+      console.error('[Next Track] Error fetching next track:', error.message);
       // No next track or error fetching it
     }
 
@@ -721,11 +765,55 @@ setInterval(async () => {
       // Get next track
       let nextTrack = null;
       try {
-        const queued = await runMpc('queued');
-        if (queued) {
-          nextTrack = await parseCurrentTrack(queued);
+        // If we have a position and queue length, get the next track from the playlist
+        if (statusInfo.position && statusInfo.queueLength && statusInfo.position < statusInfo.queueLength) {
+          const nextPosition = statusInfo.position + 1;
+          const nextTrackOutput = await runMpc(`playlist -f "%artist% - %title%|%album%|%time%|%file%" | sed -n '${nextPosition}p'`);
+
+          if (nextTrackOutput && nextTrackOutput.trim()) {
+            const parts = nextTrackOutput.split('|');
+            const trackDisplay = parts[0] || nextTrackOutput;
+
+            let artist = 'Unknown Artist';
+            let title = trackDisplay;
+
+            if (trackDisplay.includes(' - ')) {
+              const trackParts = trackDisplay.split(' - ');
+              artist = trackParts[0].trim();
+              title = trackParts.slice(1).join(' - ').trim();
+            }
+
+            const album = parts[1] && parts[1] !== '' ? parts[1] : null;
+            const duration = parts[2] && parts[2] !== '' ? parseInt(parts[2]) : null;
+            const filePath = parts[3] && parts[3] !== '' ? parts[3] : null;
+
+            // Try to get metadata from database if we have a file path
+            if (filePath) {
+              const dbTrack = await getTrackFromDatabase(filePath);
+              if (dbTrack) {
+                nextTrack = {
+                  artist: dbTrack.artist,
+                  title: dbTrack.title,
+                  album: dbTrack.album,
+                  duration: dbTrack.duration,
+                  year: dbTrack.year,
+                  trackNumber: dbTrack.track_number,
+                  artworkUrl: dbTrack.artwork_url,
+                  albumId: dbTrack.album_id,
+                  artistId: dbTrack.artist_id,
+                  filePath: dbTrack.file_path,
+                  raw: trackDisplay
+                };
+              } else {
+                nextTrack = { artist, title, album, duration, filePath, raw: trackDisplay };
+              }
+            } else {
+              nextTrack = { artist, title, album, duration, raw: trackDisplay };
+            }
+          }
         }
       } catch (error) {
+        console.error('[Next Track WS] Error fetching next track:', error.message);
         // No next track
       }
 
@@ -767,12 +855,64 @@ wss.on('connection', (ws) => {
   Promise.all([
     runMpc('current'),
     runMpc('status'),
-    runMpc('queued').catch(() => null),
     getIcecastStats()
-  ]).then(async ([current, status, queued, icecastStats]) => {
+  ]).then(async ([current, status, icecastStats]) => {
     const track = await parseCurrentTrack(current);
     const statusInfo = parseStatus(status);
-    const nextTrack = queued ? await parseCurrentTrack(queued) : null;
+
+    // Get next track
+    let nextTrack = null;
+    try {
+      // If we have a position and queue length, get the next track from the playlist
+      if (statusInfo.position && statusInfo.queueLength && statusInfo.position < statusInfo.queueLength) {
+        const nextPosition = statusInfo.position + 1;
+        const nextTrackOutput = await runMpc(`playlist -f "%artist% - %title%|%album%|%time%|%file%" | sed -n '${nextPosition}p'`);
+
+        if (nextTrackOutput && nextTrackOutput.trim()) {
+          const parts = nextTrackOutput.split('|');
+          const trackDisplay = parts[0] || nextTrackOutput;
+
+          let artist = 'Unknown Artist';
+          let title = trackDisplay;
+
+          if (trackDisplay.includes(' - ')) {
+            const trackParts = trackDisplay.split(' - ');
+            artist = trackParts[0].trim();
+            title = trackParts.slice(1).join(' - ').trim();
+          }
+
+          const album = parts[1] && parts[1] !== '' ? parts[1] : null;
+          const duration = parts[2] && parts[2] !== '' ? parseInt(parts[2]) : null;
+          const filePath = parts[3] && parts[3] !== '' ? parts[3] : null;
+
+          // Try to get metadata from database if we have a file path
+          if (filePath) {
+            const dbTrack = await getTrackFromDatabase(filePath);
+            if (dbTrack) {
+              nextTrack = {
+                artist: dbTrack.artist,
+                title: dbTrack.title,
+                album: dbTrack.album,
+                duration: dbTrack.duration,
+                year: dbTrack.year,
+                trackNumber: dbTrack.track_number,
+                artworkUrl: dbTrack.artwork_url,
+                albumId: dbTrack.album_id,
+                artistId: dbTrack.artist_id,
+                filePath: dbTrack.file_path,
+                raw: trackDisplay
+              };
+            } else {
+              nextTrack = { artist, title, album, duration, filePath, raw: trackDisplay };
+            }
+          } else {
+            nextTrack = { artist, title, album, duration, raw: trackDisplay };
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[Next Track Init] Error fetching next track:', error.message);
+    }
 
     if (track) {
       ws.send(JSON.stringify({
