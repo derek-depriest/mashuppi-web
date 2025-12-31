@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Track } from '../services/api';
 import { api } from '../services/api';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 interface AlbumPlayerProps {
   albumId: string;
@@ -29,6 +30,14 @@ export default function AlbumPlayer({
 
   const currentTrack = tracks[currentIndex];
   const nextTrack = currentIndex < tracks.length - 1 ? tracks[currentIndex + 1] : null;
+
+  // Update document title with currently playing track
+  useDocumentTitle({
+    artist: currentTrack?.artist,
+    title: currentTrack?.title,
+    isPlaying,
+    prefix: '♫',
+  });
 
   // Track album play on mount
   useEffect(() => {

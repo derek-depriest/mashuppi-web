@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { api, STREAM_URL } from '../services/api';
 import type { Track, NowPlaying } from '../services/api';
 import StreamStats from './StreamStats';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const MashuppiPlayer: React.FC = () => {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false); // Actual audio element state
@@ -24,6 +25,13 @@ const MashuppiPlayer: React.FC = () => {
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Update document title with currently playing track
+  useDocumentTitle({
+    artist: nowPlaying?.artist,
+    title: nowPlaying?.title,
+    isPlaying: isAudioPlaying && isStreamPlaying,
+  });
 
   // Format time helper
   const formatTime = (seconds: number | null): string => {
