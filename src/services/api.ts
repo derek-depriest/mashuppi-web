@@ -31,6 +31,7 @@ export interface NowPlaying {
   peakListeners?: number;
   streamStart?: string | null;
   uptime?: number | null; // Stream uptime in seconds
+  bitrate?: number; // Stream bitrate in kbps
 }
 
 export interface ListenerStats {

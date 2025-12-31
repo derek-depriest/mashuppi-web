@@ -4,11 +4,12 @@ import type { Track, NowPlaying } from '../services/api';
 import StreamStats from './StreamStats';
 
 const MashuppiPlayer: React.FC = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false); // Actual audio element state
   const [volume, setVolume] = useState(75);
 
   // Real-time data from API
   const [nowPlaying, setNowPlaying] = useState<Track | null>(null);
+  const [isStreamPlaying, setIsStreamPlaying] = useState(false); // Stream status from API
   const [elapsed, setElapsed] = useState<number | null>(null);
   const [total, setTotal] = useState<number | null>(null);
   const [percentage, setPercentage] = useState<number | null>(null);
@@ -18,6 +19,7 @@ const MashuppiPlayer: React.FC = () => {
   const [listeners, setListeners] = useState<number>(0);
   const [peakListeners, setPeakListeners] = useState<number>(0);
   const [uptime, setUptime] = useState<number | null>(null);
+  const [bitrate, setBitrate] = useState<number | null>(null);
   const [albumArtUrl, setAlbumArtUrl] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -36,7 +38,7 @@ const MashuppiPlayer: React.FC = () => {
     try {
       const data: NowPlaying = await api.getNowPlaying();
       setNowPlaying(data.track);
-      setIsPlaying(data.isPlaying);
+      setIsStreamPlaying(data.isPlaying);
       setElapsed(data.elapsed ?? null);
       setTotal(data.total ?? null);
       setPercentage(data.percentage ?? null);
@@ -46,6 +48,7 @@ const MashuppiPlayer: React.FC = () => {
       setListeners(data.listeners ?? 0);
       setPeakListeners(data.peakListeners ?? 0);
       setUptime(data.uptime ?? null);
+      setBitrate(data.bitrate ?? null);
     } catch (error) {
       console.error('[MashuppiPlayer] Error fetching now playing:', error);
     }
@@ -115,6 +118,7 @@ const MashuppiPlayer: React.FC = () => {
             setListeners(data.listeners ?? 0);
             setPeakListeners(data.peakListeners ?? 0);
             setUptime(data.uptime ?? null);
+            setBitrate(data.bitrate ?? null);
             setElapsed(data.elapsed ?? null);
             setTotal(data.total ?? null);
             setPercentage(data.percentage ?? null);
@@ -154,9 +158,9 @@ const MashuppiPlayer: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Update elapsed time and uptime every second when playing
+  // Update elapsed time and uptime every second when stream is playing
   useEffect(() => {
-    if (!isPlaying || elapsed === null || total === null) return;
+    if (!isStreamPlaying || elapsed === null || total === null) return;
 
     const interval = setInterval(() => {
       // Increment elapsed time
@@ -179,17 +183,19 @@ const MashuppiPlayer: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, total]);
+  }, [isStreamPlaying, total]);
 
   // Audio control
-  const togglePlayPause = () => {
+  const togglePlayPause = async () => {
     if (audioRef.current) {
-      if (isPlaying) {
+      if (isAudioPlaying) {
         audioRef.current.pause();
-        setIsPlaying(false);
       } else {
-        audioRef.current.play();
-        setIsPlaying(true);
+        try {
+          await audioRef.current.play();
+        } catch (error) {
+          console.error('[MashuppiPlayer] Error playing audio:', error);
+        }
       }
     }
   };
@@ -230,8 +236,8 @@ const MashuppiPlayer: React.FC = () => {
       <audio
         ref={audioRef}
         src={STREAM_URL}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
+        onPlay={() => setIsAudioPlaying(true)}
+        onPause={() => setIsAudioPlaying(false)}
       />
 
       <div style={{
@@ -368,6 +374,7 @@ const MashuppiPlayer: React.FC = () => {
               }} />
             </div>
             {/* Reflection */}
+            {/* 
             <div style={{
               height: '40px',
               marginTop: '4px',
@@ -380,6 +387,7 @@ const MashuppiPlayer: React.FC = () => {
               transform: 'scaleY(-1)',
               filter: 'blur(2px)'
             }} />
+            */}
           </div>
 
           {/* LCD Display */}
@@ -553,7 +561,7 @@ const MashuppiPlayer: React.FC = () => {
                 `;
               }}
             >
-              {isPlaying ? '⏸' : '▶'}
+              {isAudioPlaying ? '⏸' : '▶'}
             </button>
           </div>
 
@@ -672,8 +680,8 @@ const MashuppiPlayer: React.FC = () => {
           color: '#999',
           fontFamily: '"Courier New", monospace'
         }}>
-          <span>{isPlaying ? '▶ PLAYING' : '⏸ PAUSED'}</span>
-          <span>LISTENERS: {listeners} | 320 KBPS</span>
+          <span>{isAudioPlaying ? '▶ PLAYING' : '⏸ PAUSED'}</span>
+          <span>{bitrate ? `${bitrate} KBPS` : 'STREAM'}</span>
         </div>
       </div>
 

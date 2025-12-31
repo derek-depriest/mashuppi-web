@@ -293,6 +293,7 @@ app.get('/api/now-playing', async (req, res) => {
       peakListeners: icecastStats.peakListeners,
       streamStart: icecastStats.streamStart || null,
       uptime: icecastStats.uptime || null,
+      bitrate: icecastStats.bitrate || null,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -745,6 +746,7 @@ setInterval(async () => {
             peakListeners: icecastStats.peakListeners,
             streamStart: icecastStats.streamStart || null,
             uptime: icecastStats.uptime || null,
+            bitrate: icecastStats.bitrate || null,
             timestamp: new Date().toISOString()
           }));
         }
@@ -784,6 +786,7 @@ wss.on('connection', (ws) => {
         peakListeners: icecastStats.peakListeners,
         streamStart: icecastStats.streamStart || null,
         uptime: icecastStats.uptime || null,
+        bitrate: icecastStats.bitrate || null,
         timestamp: new Date().toISOString()
       }));
     }
