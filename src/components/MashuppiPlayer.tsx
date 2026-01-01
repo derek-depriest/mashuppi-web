@@ -7,6 +7,8 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 const MashuppiPlayer: React.FC = () => {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false); // Actual audio element state
   const [volume, setVolume] = useState(75);
+  const [isMuted, setIsMuted] = useState(false);
+  const [previousVolume, setPreviousVolume] = useState(75);
 
   // Real-time data from API
   const [nowPlaying, setNowPlaying] = useState<Track | null>(null);
@@ -253,6 +255,35 @@ const MashuppiPlayer: React.FC = () => {
     if (audioRef.current) {
       audioRef.current.volume = newVolume / 100;
     }
+    // If volume is changed from 0, unmute
+    if (newVolume > 0 && isMuted) {
+      setIsMuted(false);
+    }
+    // If volume is set to 0, mute
+    if (newVolume === 0 && !isMuted) {
+      setIsMuted(true);
+    }
+  };
+
+  // Toggle mute
+  const toggleMute = () => {
+    if (isMuted) {
+      // Unmute: restore previous volume
+      const volumeToRestore = previousVolume > 0 ? previousVolume : 75;
+      setVolume(volumeToRestore);
+      setIsMuted(false);
+      if (audioRef.current) {
+        audioRef.current.volume = volumeToRestore / 100;
+      }
+    } else {
+      // Mute: save current volume and set to 0
+      setPreviousVolume(volume);
+      setVolume(0);
+      setIsMuted(true);
+      if (audioRef.current) {
+        audioRef.current.volume = 0;
+      }
+    }
   };
 
   const progress = percentage ?? 0;
@@ -379,24 +410,28 @@ const MashuppiPlayer: React.FC = () => {
 
         {/* Main Player Body */}
         <div style={{ padding: '20px' }}>
-          {/* Album Art with Reflection */}
+          {/* Album Art with Play/Pause Overlay */}
           <div style={{
             position: 'relative',
             width: '100%',
             marginBottom: '20px'
           }}>
-            <div style={{
-              position: 'relative',
-              paddingBottom: '100%',
-              background: '#000',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              boxShadow: `
-                0 0 0 1px rgba(255, 255, 255, 0.1),
-                0 8px 24px rgba(0, 0, 0, 0.6),
-                inset 0 0 60px rgba(0, 0, 0, 0.3)
-              `
-            }}>
+            <div
+              onClick={togglePlayPause}
+              style={{
+                position: 'relative',
+                paddingBottom: '100%',
+                background: '#000',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                cursor: 'pointer',
+                boxShadow: `
+                  0 0 0 1px rgba(255, 255, 255, 0.1),
+                  0 8px 24px rgba(0, 0, 0, 0.6),
+                  inset 0 0 60px rgba(0, 0, 0, 0.3)
+                `
+              }}
+            >
               <img
                 src={currentTrack.albumArt}
                 alt={currentTrack.album}
@@ -419,22 +454,40 @@ const MashuppiPlayer: React.FC = () => {
                 background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%)',
                 pointerEvents: 'none'
               }} />
+              {/* Play/Pause Overlay */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(0, 0, 0, 0.3)',
+                opacity: 0,
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+              >
+                <div style={{
+                  width: '80px',
+                  height: '80px',
+                  background: 'rgba(255, 107, 107, 0.9)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '36px',
+                  color: '#fff',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  {isAudioPlaying ? '⏸' : '▶'}
+                </div>
+              </div>
             </div>
-            {/* Reflection */}
-            {/* 
-            <div style={{
-              height: '40px',
-              marginTop: '4px',
-              background: `linear-gradient(180deg,
-                rgba(0, 0, 0, 0.3) 0%,
-                transparent 100%
-              )`,
-              borderRadius: '0 0 8px 8px',
-              opacity: 0.5,
-              transform: 'scaleY(-1)',
-              filter: 'blur(2px)'
-            }} />
-            */}
           </div>
 
           {/* LCD Display */}
@@ -562,56 +615,6 @@ const MashuppiPlayer: React.FC = () => {
             </div>
           </div>
 
-          {/* Control Buttons */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '16px'
-          }}>
-            <button
-              onClick={togglePlayPause}
-              style={{
-                width: '64px',
-                height: '64px',
-                background: 'linear-gradient(180deg, #ff6b6b 0%, #ee5a52 100%)',
-                border: '1px solid #2a2a2a',
-                borderRadius: '50%',
-                color: '#fff',
-                fontSize: '24px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: `
-                  0 4px 8px rgba(0, 0, 0, 0.4),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                  inset 0 -1px 0 rgba(0, 0, 0, 0.3)
-                `,
-                transition: 'all 0.15s',
-                position: 'relative'
-              }}
-              onMouseDown={(e) => {
-                e.currentTarget.style.transform = 'translateY(2px)';
-                e.currentTarget.style.boxShadow = `
-                  0 2px 4px rgba(0, 0, 0, 0.4),
-                  inset 0 2px 6px rgba(0, 0, 0, 0.5)
-                `;
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = `
-                  0 4px 8px rgba(0, 0, 0, 0.4),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                  inset 0 -1px 0 rgba(0, 0, 0, 0.3)
-                `;
-              }}
-            >
-              {isAudioPlaying ? '⏸' : '▶'}
-            </button>
-          </div>
-
           {/* Volume Control */}
           <div style={{
             display: 'flex',
@@ -619,10 +622,24 @@ const MashuppiPlayer: React.FC = () => {
             gap: '12px',
             marginBottom: '16px'
           }}>
-            <span style={{
-              fontSize: '18px',
-              filter: 'grayscale(0.3)'
-            }}>🔊</span>
+            <span
+              onClick={toggleMute}
+              style={{
+                fontSize: '18px',
+                filter: 'grayscale(0.3)',
+                cursor: 'pointer',
+                transition: 'transform 0.1s',
+                userSelect: 'none'
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = 'scale(0.9)';
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              {isMuted || volume === 0 ? '🔇' : volume < 50 ? '🔉' : '🔊'}
+            </span>
             <div style={{
               flex: 1,
               height: '8px',
