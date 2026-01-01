@@ -108,11 +108,35 @@ const MashuppiPlayer: React.FC = () => {
 
   // Setup WebSocket for real-time updates
   useEffect(() => {
+    let reconnectTimeout: number | null = null;
+    let heartbeatInterval: number | null = null;
+
     const connectWebSocket = () => {
       const ws = new WebSocket('wss://mashuppi.com/ws');
 
       ws.onopen = () => {
         console.log('WebSocket connected');
+
+        // Clear any pending reconnection attempts
+        if (reconnectTimeout) {
+          clearTimeout(reconnectTimeout);
+          reconnectTimeout = null;
+        }
+
+        // Start heartbeat - browser WebSocket automatically responds to pings
+        // We just need to monitor the connection health
+        heartbeatInterval = window.setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            // Connection is healthy, no action needed
+            // The server will send pings and browser automatically responds with pongs
+          } else if (ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
+            // Connection lost, clear interval
+            if (heartbeatInterval) {
+              clearInterval(heartbeatInterval);
+              heartbeatInterval = null;
+            }
+          }
+        }, 10000);
       };
 
       ws.onmessage = (event) => {
@@ -142,7 +166,15 @@ const MashuppiPlayer: React.FC = () => {
 
       ws.onclose = () => {
         console.log('WebSocket disconnected, reconnecting...');
-        setTimeout(connectWebSocket, 5000);
+
+        // Clear heartbeat interval
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+          heartbeatInterval = null;
+        }
+
+        // Reconnect after a delay
+        reconnectTimeout = window.setTimeout(connectWebSocket, 5000);
       };
 
       wsRef.current = ws;
@@ -151,6 +183,13 @@ const MashuppiPlayer: React.FC = () => {
     connectWebSocket();
 
     return () => {
+      // Cleanup on unmount
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
       if (wsRef.current) {
         wsRef.current.close();
       }

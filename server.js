@@ -851,6 +851,13 @@ setInterval(async () => {
 wss.on('connection', (ws) => {
   console.log('📡 WebSocket client connected');
 
+  // Set up ping/pong heartbeat to keep connection alive
+  ws.isAlive = true;
+
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+
   // Send current track immediately on connect
   Promise.all([
     runMpc('current'),
@@ -936,5 +943,18 @@ wss.on('connection', (ws) => {
     console.log('📡 WebSocket client disconnected');
   });
 });
+
+// Ping all clients every 30 seconds to keep connections alive
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log('📡 Terminating unresponsive WebSocket client');
+      return ws.terminate();
+    }
+
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
 
 console.log('📡 WebSocket server ready for connections');
